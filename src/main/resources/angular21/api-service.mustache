@@ -1,14 +1,14 @@
 {{>licenseInfo}}
 /**
- * {{classname}} - API service for mutations (POST, PUT, DELETE, PATCH)
+ * {{classname}} - API service
  * @generated from OpenAPI specification
  */
-import { HttpClient{{#operations.operation}}{{#hasFormParams}}, HttpHeaders{{/hasFormParams}}{{/operations.operation}} } from '@angular/common/http';
+import { HttpClient, HttpResponse } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-{{#imports}}
-import { {{classname}} } from '../models/{{classFilename}}';
-{{/imports}}
+{{#tsImports}}
+import { {{classname}} } from '../model/{{filename}}';
+{{/tsImports}}
 
 @Injectable({ providedIn: 'root' })
 export class {{classname}} {
@@ -17,7 +17,6 @@ export class {{classname}} {
 
 {{#operations}}
 {{#operation}}
-{{^vendorExtensions.x-is-get}}
     /**
      * {{summary}}
      * {{notes}}
@@ -25,25 +24,25 @@ export class {{classname}} {
      * @param {{paramName}} {{description}}
 {{/allParams}}
      */
-    {{nickname}}({{#allParams}}{{paramName}}{{^required}}?{{/required}}: {{{dataType}}}{{^-last}}, {{/-last}}{{/allParams}}): Observable<{{#returnType}}{{{.}}}{{/returnType}}{{^returnType}}void{{/returnType}}> {
+    {{nickname}}({{#allParams}}{{paramName}}{{^required}}?{{/required}}: {{{dataType}}}{{^-last}}, {{/-last}}{{/allParams}}): Observable<{{#isResponseFile}}HttpResponse<Blob>{{/isResponseFile}}{{^isResponseFile}}{{#returnType}}{{{.}}}{{/returnType}}{{^returnType}}void{{/returnType}}{{/isResponseFile}}> {
 {{#pathParams}}
 {{^vendorExtensions.x-is-numeric}}
         const {{paramName}}Path = encodeURIComponent(String({{paramName}}));
 {{/vendorExtensions.x-is-numeric}}
 {{/pathParams}}
 {{#hasQueryParams}}
-        const queryParams: Record<string, string> = {};
+        const queryParams = new URLSearchParams();
 {{#queryParams}}
         if ({{paramName}} !== undefined && {{paramName}} !== null) {
 {{#isArray}}
-            queryParams['{{baseName}}'] = {{paramName}}.join(',');
+            {{paramName}}.forEach(item => queryParams.append('{{baseName}}', String(item)));
 {{/isArray}}
 {{^isArray}}
-            queryParams['{{baseName}}'] = String({{paramName}});
+            queryParams.set('{{baseName}}', String({{paramName}}));
 {{/isArray}}
         }
 {{/queryParams}}
-        const queryString = new URLSearchParams(queryParams).toString();
+        const queryString = queryParams.toString();
         const url = `${this.basePath}{{{vendorExtensions.xPathTemplate}}}${queryString ? `?${queryString}` : ''}`;
 {{/hasQueryParams}}
 {{^hasQueryParams}}
@@ -61,26 +60,33 @@ export class {{classname}} {
 {{/isArray}}
         }
 {{/formParams}}
-        return this.http.{{httpMethod}}{{#returnType}}<{{{.}}}>{{/returnType}}(url, formData);
+{{#isResponseFile}}
+        return this.http.{{httpMethod}}(url, formData, { responseType: 'blob', observe: 'response' });
+{{/isResponseFile}}
+{{^isResponseFile}}
+        return this.http.{{httpMethod}}<{{#returnType}}{{{.}}}{{/returnType}}{{^returnType}}void{{/returnType}}>(url, formData);
+{{/isResponseFile}}
 {{/hasFormParams}}
 {{^hasFormParams}}
 {{#bodyParam}}
-        return this.http.{{httpMethod}}{{#returnType}}<{{{.}}}>{{/returnType}}(url, {{paramName}});
+{{#isResponseFile}}
+        return this.http.{{httpMethod}}(url, {{paramName}}, { responseType: 'blob', observe: 'response' });
+{{/isResponseFile}}
+{{^isResponseFile}}
+        return this.http.{{httpMethod}}<{{#returnType}}{{{.}}}{{/returnType}}{{^returnType}}void{{/returnType}}>(url, {{paramName}});
+{{/isResponseFile}}
 {{/bodyParam}}
 {{^bodyParam}}
-{{#hasQueryParams}}
-        return this.http.{{httpMethod}}{{#returnType}}<{{{.}}}>{{/returnType}}(url);
-{{/hasQueryParams}}
-{{^hasQueryParams}}
-{{#vendorExtensions.x-is-mutation}}
-        return this.http.{{httpMethod}}{{#returnType}}<{{{.}}}>{{/returnType}}(url{{#isBodyAllowed}}, null{{/isBodyAllowed}});
-{{/vendorExtensions.x-is-mutation}}
-{{/hasQueryParams}}
+{{#isResponseFile}}
+        return this.http.{{httpMethod}}(url{{#isBodyAllowed}}, null{{/isBodyAllowed}}, { responseType: 'blob', observe: 'response' });
+{{/isResponseFile}}
+{{^isResponseFile}}
+        return this.http.{{httpMethod}}<{{#returnType}}{{{.}}}{{/returnType}}{{^returnType}}void{{/returnType}}>(url{{#isBodyAllowed}}, null{{/isBodyAllowed}});
+{{/isResponseFile}}
 {{/bodyParam}}
 {{/hasFormParams}}
     }
 
-{{/vendorExtensions.x-is-get}}
 {{/operation}}
 {{/operations}}
 }
