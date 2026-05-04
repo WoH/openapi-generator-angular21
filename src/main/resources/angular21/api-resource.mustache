@@ -6,9 +6,9 @@
  */
 import { httpResource, HttpResourceRef } from '@angular/common/http';
 import { Signal } from '@angular/core';
-{{#imports}}
-import { {{classname}} } from '../models/{{classFilename}}';
-{{/imports}}
+{{#resourceImports}}
+import { {{classname}} } from '{{filename}}';
+{{/resourceImports}}
 
 const BASE_PATH = '{{contextPath}}';
 

@@ -6,9 +6,9 @@
 import { HttpClient{{#operations.operation}}{{#hasFormParams}}, HttpHeaders{{/hasFormParams}}{{/operations.operation}} } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-{{#imports}}
-import { {{classname}} } from '../models/{{classFilename}}';
-{{/imports}}
+{{#mutationImports}}
+import { {{classname}} } from '{{filename}}';
+{{/mutationImports}}
 
 @Injectable({ providedIn: 'root' })
 export class {{classname}} {
@@ -61,19 +61,19 @@ export class {{classname}} {
 {{/isArray}}
         }
 {{/formParams}}
-        return this.http.{{httpMethod}}{{#returnType}}<{{{.}}}>{{/returnType}}(url, formData);
+        return this.http.{{httpMethod}}{{#returnType}}<{{{.}}}>{{/returnType}}{{^returnType}}<void>{{/returnType}}(url, formData);
 {{/hasFormParams}}
 {{^hasFormParams}}
 {{#bodyParam}}
-        return this.http.{{httpMethod}}{{#returnType}}<{{{.}}}>{{/returnType}}(url, {{paramName}});
+        return this.http.{{httpMethod}}{{#returnType}}<{{{.}}}>{{/returnType}}{{^returnType}}<void>{{/returnType}}(url, {{paramName}});
 {{/bodyParam}}
 {{^bodyParam}}
 {{#hasQueryParams}}
-        return this.http.{{httpMethod}}{{#returnType}}<{{{.}}}>{{/returnType}}(url);
+        return this.http.{{httpMethod}}{{#returnType}}<{{{.}}}>{{/returnType}}{{^returnType}}<void>{{/returnType}}(url);
 {{/hasQueryParams}}
 {{^hasQueryParams}}
 {{#vendorExtensions.x-is-mutation}}
-        return this.http.{{httpMethod}}{{#returnType}}<{{{.}}}>{{/returnType}}(url{{#isBodyAllowed}}, null{{/isBodyAllowed}});
+        return this.http.{{httpMethod}}{{#returnType}}<{{{.}}}>{{/returnType}}{{^returnType}}<void>{{/returnType}}(url{{#isBodyAllowed}}, null{{/isBodyAllowed}});
 {{/vendorExtensions.x-is-mutation}}
 {{/hasQueryParams}}
 {{/bodyParam}}

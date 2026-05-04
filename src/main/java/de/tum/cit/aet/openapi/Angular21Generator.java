@@ -193,6 +193,14 @@ public class Angular21Generator extends TypeScriptAngularClientCodegen {
     }
 
     @Override
+    public String toModelImport(String name) {
+        if (importMapping.containsKey(name)) {
+            return importMapping.get(name);
+        }
+        return "../models/" + toModelFilename(removeModelPrefixSuffix(name));
+    }
+
+    @Override
     public String toApiName(String name) {
         return StringUtils.camelize(name) + "Api";
     }
@@ -307,8 +315,32 @@ public class Angular21Generator extends TypeScriptAngularClientCodegen {
         operations.put("mutationOperations", mutationOperations);
         operations.put("hasGetOperations", !getOperations.isEmpty());
         operations.put("hasMutationOperations", !mutationOperations.isEmpty());
+        result.put("resourceImports", filterImports(result.getImports(), getOperations));
+        result.put("mutationImports", filterImports(result.getImports(), mutationOperations));
 
         return result;
+    }
+
+    private List<Map<String, String>> filterImports(List<Map<String, String>> imports, List<CodegenOperation> operations) {
+        if (imports == null || imports.isEmpty() || operations.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        Set<String> usedImports = new HashSet<>();
+        for (CodegenOperation operation : operations) {
+            if (operation.imports != null) {
+                usedImports.addAll(operation.imports);
+            }
+        }
+
+        List<Map<String, String>> filteredImports = new ArrayList<>();
+        for (Map<String, String> importEntry : imports) {
+            String className = importEntry.get("classname");
+            if (usedImports.contains(className)) {
+                filteredImports.add(importEntry);
+            }
+        }
+        return filteredImports;
     }
 
     /**
@@ -401,6 +433,10 @@ public class Angular21Generator extends TypeScriptAngularClientCodegen {
                     valueVar = templateVarByParamName.get(param.paramName);
                 }
                 String placeholder = "{" + param.baseName + "}";
+                String generatedPlaceholder = "{" + valueVar + "}";
+                if (!generatedPlaceholder.equals(placeholder)) {
+                    path = path.replace(generatedPlaceholder, "${" + valueVar + "}");
+                }
                 path = path.replace(placeholder, "${" + valueVar + "}");
             }
         }
