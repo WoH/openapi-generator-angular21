@@ -59,6 +59,10 @@ class Angular21GeneratorTest {
         assertContains(model, "readonly id: number;");
         assertContains(model, "readonly title: string;");
 
+        String configurationModel = Files.readString(tempDir.resolve("models/tutorial-group-configuration.ts"));
+        assertContains(configurationModel, "import type { TutorialGroupFreePeriod } from './tutorial-group-free-period';");
+        assertFalse(configurationModel.contains("from 'tutorial-group-free-period'"));
+
         String requestModel = Files.readString(tempDir.resolve("models/create-or-update-tutorial-group-request.ts"));
         assertContains(requestModel, "title: string;");
         assertFalse(requestModel.contains("readonly title"));
