@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "de.tum.cit.aet"
-version = "1.0.0"
+version = "1.1.0-SNAPSHOT"
 
 java {
     toolchain {
@@ -23,7 +23,7 @@ repositories {
 val openapiGeneratorCli by configurations.creating
 
 dependencies {
-    val openapiGeneratorVersion = "7.18.0"
+    val openapiGeneratorVersion = "7.22.0"
 
     // OpenAPI Generator core dependency
     implementation("org.openapitools:openapi-generator:$openapiGeneratorVersion")
@@ -100,7 +100,8 @@ publishing {
     repositories {
         maven {
             name = "GitHubPackages"
-            url = uri("https://maven.pkg.github.com/ls1intum/openapi-generator-angular21")
+            val owner = System.getenv("GITHUB_REPOSITORY_OWNER") ?: "ls1intum"
+            url = uri("https://maven.pkg.github.com/$owner/openapi-generator-angular21")
             credentials {
                 username = System.getenv("GITHUB_ACTOR")
                 password = System.getenv("GITHUB_TOKEN")

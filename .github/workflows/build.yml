@@ -2,7 +2,7 @@ name: Build and Publish
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ '**' ]
     tags: [ 'v*' ]
   pull_request:
     branches: [ main ]
@@ -10,53 +10,85 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    
+
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Set up JDK 25
       uses: actions/setup-java@v4
       with:
         java-version: '25'
         distribution: 'temurin'
         cache: gradle
-    
+
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
-    
+
     - name: Build with Gradle
       run: ./gradlew build
-    
+
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
         name: jar
         path: build/libs/*.jar
 
-  publish:
+  publish-snapshot:
     needs: build
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
-    
+    if: github.event_name == 'push' && !startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: read
+      packages: write
+
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Set up JDK 25
       uses: actions/setup-java@v4
       with:
         java-version: '25'
         distribution: 'temurin'
         cache: gradle
-    
+
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
-    
-    - name: Publish to GitHub Packages
+
+    - name: Publish snapshot to GitHub Packages
       run: ./gradlew publish
       env:
         GITHUB_ACTOR: ${{ github.actor }}
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    
+        GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
+
+  publish-release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+      packages: write
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up JDK 25
+      uses: actions/setup-java@v4
+      with:
+        java-version: '25'
+        distribution: 'temurin'
+        cache: gradle
+
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+
+    - name: Publish release to GitHub Packages
+      run: ./gradlew publish
+      env:
+        GITHUB_ACTOR: ${{ github.actor }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
+
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v1
       with:
