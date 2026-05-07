@@ -53,7 +53,7 @@ class Angular21GeneratorTest {
         assertContains(api, "exportTutorialGroupsToCSV(courseId: number, fields: Array<string>, observe?: 'body', reportProgress?: boolean): Observable<Blob>;");
         assertContains(api, "exportTutorialGroupsToCSV(courseId: number, fields: Array<string>, observe?: 'response', reportProgress?: boolean): Observable<HttpResponse<Blob>>;");
         assertContains(api, "exportTutorialGroupsToCSV(courseId: number, fields: Array<string>, observe?: 'events', reportProgress?: boolean): Observable<HttpEvent<Blob>>;");
-        assertContains(api, "return this.http.get<Blob>(url, { observe, reportProgress, responseType: 'blob' as 'blob' });");
+        assertContains(api, "return this.http.get(url, { observe, reportProgress, responseType: 'blob' as 'blob' });");
         assertFalse(api.contains("return this.http.get<TutorialGroupDetailData>(url, { observe, reportProgress, responseType"));
 
         assertContains(api, "getTutorialGroupAvatarResource(courseId: Signal<number> | number, tutorialGroupId: Signal<number> | number): HttpResourceRef<Blob | undefined>");

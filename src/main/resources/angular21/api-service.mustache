@@ -88,26 +88,26 @@ export class {{classname}} {
 {{/isArray}}
         }
 {{/formParams}}
-        return this.http.{{httpMethod}}<{{#returnType}}{{{.}}}{{/returnType}}{{^returnType}}void{{/returnType}}>(url, formData, { observe, reportProgress{{#isResponseFile}}, responseType: 'blob' as 'blob'{{/isResponseFile}} });
+        return this.http.{{httpMethod}}{{^isResponseFile}}<{{#returnType}}{{{.}}}{{/returnType}}{{^returnType}}void{{/returnType}}>{{/isResponseFile}}(url, formData, { observe, reportProgress{{#isResponseFile}}, responseType: 'blob' as 'blob'{{/isResponseFile}} });
 {{/hasFormParams}}
 {{^hasFormParams}}
 {{#bodyParam}}
-        return this.http.{{httpMethod}}<{{#returnType}}{{{.}}}{{/returnType}}{{^returnType}}void{{/returnType}}>(url, {{paramName}}, { observe, reportProgress{{#isResponseFile}}, responseType: 'blob' as 'blob'{{/isResponseFile}} });
+        return this.http.{{httpMethod}}{{^isResponseFile}}<{{#returnType}}{{{.}}}{{/returnType}}{{^returnType}}void{{/returnType}}>{{/isResponseFile}}(url, {{paramName}}, { observe, reportProgress{{#isResponseFile}}, responseType: 'blob' as 'blob'{{/isResponseFile}} });
 {{/bodyParam}}
 {{^bodyParam}}
 {{#isBodyAllowed}}
-        return this.http.{{httpMethod}}<{{#returnType}}{{{.}}}{{/returnType}}{{^returnType}}void{{/returnType}}>(url, null, { observe, reportProgress{{#isResponseFile}}, responseType: 'blob' as 'blob'{{/isResponseFile}} });
+        return this.http.{{httpMethod}}{{^isResponseFile}}<{{#returnType}}{{{.}}}{{/returnType}}{{^returnType}}void{{/returnType}}>{{/isResponseFile}}(url, null, { observe, reportProgress{{#isResponseFile}}, responseType: 'blob' as 'blob'{{/isResponseFile}} });
 {{/isBodyAllowed}}
 {{^isBodyAllowed}}
 {{#hasQueryParams}}
-        return this.http.{{httpMethod}}<{{#returnType}}{{{.}}}{{/returnType}}{{^returnType}}void{{/returnType}}>(url, { observe, reportProgress{{#isResponseFile}}, responseType: 'blob' as 'blob'{{/isResponseFile}} });
+        return this.http.{{httpMethod}}{{^isResponseFile}}<{{#returnType}}{{{.}}}{{/returnType}}{{^returnType}}void{{/returnType}}>{{/isResponseFile}}(url, { observe, reportProgress{{#isResponseFile}}, responseType: 'blob' as 'blob'{{/isResponseFile}} });
 {{/hasQueryParams}}
 {{^hasQueryParams}}
 {{#vendorExtensions.x-is-get}}
-        return this.http.{{httpMethod}}<{{#returnType}}{{{.}}}{{/returnType}}{{^returnType}}void{{/returnType}}>(url, { observe, reportProgress{{#isResponseFile}}, responseType: 'blob' as 'blob'{{/isResponseFile}} });
+        return this.http.{{httpMethod}}{{^isResponseFile}}<{{#returnType}}{{{.}}}{{/returnType}}{{^returnType}}void{{/returnType}}>{{/isResponseFile}}(url, { observe, reportProgress{{#isResponseFile}}, responseType: 'blob' as 'blob'{{/isResponseFile}} });
 {{/vendorExtensions.x-is-get}}
 {{#vendorExtensions.x-is-mutation}}
-        return this.http.{{httpMethod}}<{{#returnType}}{{{.}}}{{/returnType}}{{^returnType}}void{{/returnType}}>(url{{#isBodyAllowed}}, null{{/isBodyAllowed}}, { observe, reportProgress{{#isResponseFile}}, responseType: 'blob' as 'blob'{{/isResponseFile}} });
+        return this.http.{{httpMethod}}{{^isResponseFile}}<{{#returnType}}{{{.}}}{{/returnType}}{{^returnType}}void{{/returnType}}>{{/isResponseFile}}(url{{#isBodyAllowed}}, null{{/isBodyAllowed}}, { observe, reportProgress{{#isResponseFile}}, responseType: 'blob' as 'blob'{{/isResponseFile}} });
 {{/vendorExtensions.x-is-mutation}}
 {{/hasQueryParams}}
 {{/isBodyAllowed}}
