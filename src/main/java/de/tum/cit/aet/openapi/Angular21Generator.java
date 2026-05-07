@@ -280,7 +280,7 @@ public class Angular21Generator extends TypeScriptAngularClientCodegen {
             }
             op.vendorExtensions.put("x-use-http-resource", useResource);
             op.vendorExtensions.put("x-is-resource-operation", useResource);
-            op.vendorExtensions.put("x-is-observable-operation", !useResource);
+            op.vendorExtensions.put("x-is-observable-operation", true);
             if (useResource) {
                 resourceOperations.add(op);
             }

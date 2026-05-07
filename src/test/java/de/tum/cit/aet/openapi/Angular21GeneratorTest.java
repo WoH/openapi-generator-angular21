@@ -40,6 +40,7 @@ class Angular21GeneratorTest {
         assertContains(api, "export class TutorialGroupApiService");
         assertContains(api, "export interface GetTutorialGroupsParams");
         assertContains(api, "getTutorialGroupsResource(courseId: Signal<number> | number, params?: Signal<GetTutorialGroupsParams>): HttpResourceRef<Array<TutorialGroupDetailData> | undefined>");
+        assertContains(api, "getTutorialGroups(courseId: number, registered?: boolean, campus?: Array<string>, observe?: 'body', reportProgress?: boolean): Observable<Array<TutorialGroupDetailData>>;");
         assertContains(api, "searchParams.append('campus', String(value))");
         assertContains(api, "return `${BASE_PATH}/tutorialgroup/courses/${courseIdValue}/tutorial-groups${query ? `?${query}` : ''}`;");
         assertContains(api, "getTutorialGroup(courseId: number, tutorialGroupId: number, observe?: 'response', reportProgress?: boolean): Observable<HttpResponse<TutorialGroupDetailData>>;");
