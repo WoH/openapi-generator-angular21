@@ -70,6 +70,34 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TutorialGroupDetailData'
+  /tutorialgroup/courses/{courseId}/tutorial-groups/search:
+    get:
+      tags:
+        - tutorial-group
+      operationId: searchTutorialGroups
+      x-angular-http-resource: true
+      summary: Search tutorial groups by name
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Matching tutorial groups
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TutorialGroupDetailData'
   /tutorialgroup/courses/{courseId}/tutorial-groups/export/csv:
     get:
       tags:

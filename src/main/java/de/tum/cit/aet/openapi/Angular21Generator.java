@@ -181,7 +181,7 @@ public class Angular21Generator extends TypeScriptAngularClientCodegen {
         if (legacyNaming) {
             return super.toModelFilename(name);
         }
-        return toKebabCase(name);
+        return "./" + toKebabCase(name);
     }
 
     @Override
@@ -189,7 +189,7 @@ public class Angular21Generator extends TypeScriptAngularClientCodegen {
         if (legacyNaming) {
             return super.toApiFilename(name);
         }
-        return toKebabCase(name);
+        return toKebabCase(name) + "-api.service";
     }
 
     @Override

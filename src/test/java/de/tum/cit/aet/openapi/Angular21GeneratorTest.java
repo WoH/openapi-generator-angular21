@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -60,6 +61,10 @@ class Angular21GeneratorTest {
         assertContains(api, "return httpResource.blob(() => {");
         assertFalse(api.contains("httpResource<Blob>"));
 
+        assertContains(api, "export interface SearchTutorialGroupsParams {");
+        assertContains(api, "searchTutorialGroupsResource(courseId: Signal<number> | number, params: Signal<SearchTutorialGroupsParams>): HttpResourceRef<Array<TutorialGroupDetailData> | undefined>");
+        assertFalse(api.contains("searchTutorialGroupsResource(courseId: Signal<number> | number, params?: Signal<SearchTutorialGroupsParams>)"));
+
         String freePeriodApiContent = Files.readString(freePeriodApi);
         assertContains(freePeriodApiContent, "getTutorialGroupFreePeriod(courseId: number, configurationId: number, freePeriodId: number, observe?: 'body', reportProgress?: boolean): Observable<TutorialGroupFreePeriod>;");
         assertFalse(freePeriodApiContent.contains("httpResource"));
@@ -77,12 +82,40 @@ class Angular21GeneratorTest {
         assertFalse(requestModel.contains("readonly title"));
     }
 
+    @Test
+    void generatesKebabCaseFilenamesWhenLegacyNamingDisabled() throws IOException {
+        generateFixture("fixtures/tutorial-groups-openapi.yaml", tempDir, Map.of("legacyNaming", false));
+
+        Path tutorialGroupApi = tempDir.resolve("api/tutorial-group-api.service.ts");
+        Path detailDataModel = tempDir.resolve("model/tutorial-group-detail-data.ts");
+        Path configurationModel = tempDir.resolve("model/tutorial-group-configuration.ts");
+
+        assertTrue(Files.exists(tutorialGroupApi), "expected kebab-case api file");
+        assertTrue(Files.exists(detailDataModel), "expected kebab-case model file");
+        assertFalse(Files.exists(tempDir.resolve("api/tutorialGroupApi.service.ts")));
+        assertFalse(Files.exists(tempDir.resolve("model/tutorialGroupDetailData.ts")));
+
+        String api = Files.readString(tutorialGroupApi);
+        assertContains(api, "import { TutorialGroupDetailData } from '../model/tutorial-group-detail-data';");
+        assertContains(api, "import { CreateOrUpdateTutorialGroupRequest } from '../model/create-or-update-tutorial-group-request';");
+        assertFalse(api.contains("from '../model/tutorialGroupDetailData'"));
+
+        String configuration = Files.readString(configurationModel);
+        assertContains(configuration, "import type { TutorialGroupFreePeriod } from './tutorial-group-free-period';");
+        assertFalse(configuration.contains("from './tutorialGroupFreePeriod'"));
+    }
+
     private static void generateFixture(String fixture, Path outputDir) {
+        generateFixture(fixture, outputDir, Map.of());
+    }
+
+    private static void generateFixture(String fixture, Path outputDir, Map<String, Object> additionalProperties) {
         String inputSpec = Path.of("src/test/resources").resolve(fixture).toAbsolutePath().toString();
         CodegenConfigurator configurator = new CodegenConfigurator()
                 .setGeneratorName(Angular21Generator.GENERATOR_NAME)
                 .setInputSpec(inputSpec)
                 .setOutputDir(outputDir.toString());
+        additionalProperties.forEach(configurator::addAdditionalProperty);
 
         new DefaultGenerator().opts(configurator.toClientOptInput()).generate();
     }
