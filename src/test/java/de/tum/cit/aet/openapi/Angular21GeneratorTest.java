@@ -18,52 +18,61 @@ class Angular21GeneratorTest {
     Path tempDir;
 
     @Test
-    void generatesTutorialGroupsResourcesAndMutationServices() throws IOException {
+    void generatesUnifiedTutorialGroupsServicesWithConfigurableResources() throws IOException {
         generateFixture("fixtures/tutorial-groups-openapi.yaml", tempDir);
 
-        Path tutorialGroupResources = tempDir.resolve("api/tutorial-group-resources.ts");
-        Path tutorialGroupApi = tempDir.resolve("api/tutorial-group-api.ts");
-        Path freePeriodResources = tempDir.resolve("api/tutorial-group-free-period-resources.ts");
-        Path freePeriodApi = tempDir.resolve("api/tutorial-group-free-period-api.ts");
+        Path tutorialGroupApi = tempDir.resolve("api/tutorialGroupApi.service.ts");
+        Path freePeriodApi = tempDir.resolve("api/tutorialGroupFreePeriodApi.service.ts");
 
-        assertTrue(Files.exists(tutorialGroupResources));
         assertTrue(Files.exists(tutorialGroupApi));
-        assertTrue(Files.exists(freePeriodResources));
         assertTrue(Files.exists(freePeriodApi));
-
-        String resources = Files.readString(tutorialGroupResources);
-        assertContains(resources, "import { TutorialGroupDetailData } from '../models/tutorial-group-detail-data';");
-        assertFalse(resources.contains("from '../models/tutorial-group'"));
-        assertFalse(resources.contains("CreateOrUpdateTutorialGroupRequest"));
-        assertContains(resources, "export function getTutorialGroupsResource(");
-        assertContains(resources, "courseId: Signal<number> | number");
-        assertContains(resources, "params?: Signal<GetTutorialGroupsParams>");
-        assertContains(resources, "searchParams.append('campus', String(value))");
-        assertContains(resources, "return `${BASE_PATH}/tutorialgroup/courses/${courseIdValue}/tutorial-groups${query ? `?${query}` : ''}`;");
-        assertFalse(resources.contains("createTutorialGroup"));
+        assertFalse(Files.exists(tempDir.resolve("api/tutorialGroupResources.service.ts")));
+        assertFalse(Files.exists(tempDir.resolve("api/tutorialGroupFreePeriodResources.service.ts")));
 
         String api = Files.readString(tutorialGroupApi);
-        assertContains(api, "import { CreateOrUpdateTutorialGroupRequest } from '../models/create-or-update-tutorial-group-request';");
-        assertContains(api, "import { TutorialGroupDetailData } from '../models/tutorial-group-detail-data';");
-        assertFalse(api.contains("from '../models/tutorial-group'"));
-        assertContains(api, "export class TutorialGroupApi");
-        assertContains(api, "createTutorialGroup(courseId: number, createOrUpdateTutorialGroupRequest: CreateOrUpdateTutorialGroupRequest): Observable<TutorialGroupDetailData>");
-        assertContains(api, "return this.http.post<TutorialGroupDetailData>(url, createOrUpdateTutorialGroupRequest);");
-        assertContains(api, "return this.http.put<TutorialGroupDetailData>(url, createOrUpdateTutorialGroupRequest);");
+        assertContains(api, "import { Configuration } from '../configuration';");
+        assertContains(api, "import { HttpClient, HttpEvent, HttpResponse, httpResource, HttpResourceRef } from '@angular/common/http';");
+        assertContains(api, "import { inject, Injectable, Signal } from '@angular/core';");
+        assertContains(api, "import { CreateOrUpdateTutorialGroupRequest } from '../model/createOrUpdateTutorialGroupRequest';");
+        assertContains(api, "import { TutorialGroupDetailData } from '../model/tutorialGroupDetailData';");
+        assertFalse(api.contains("from '../model/tutorialGroup'"));
+        assertContains(api, "export class TutorialGroupApiService");
+        assertContains(api, "export interface GetTutorialGroupsParams");
+        assertContains(api, "getTutorialGroupsResource(courseId: Signal<number> | number, params?: Signal<GetTutorialGroupsParams>): HttpResourceRef<Array<TutorialGroupDetailData> | undefined>");
+        assertContains(api, "searchParams.append('campus', String(value))");
+        assertContains(api, "return `${BASE_PATH}/tutorialgroup/courses/${courseIdValue}/tutorial-groups${query ? `?${query}` : ''}`;");
+        assertContains(api, "getTutorialGroup(courseId: number, tutorialGroupId: number, observe?: 'response', reportProgress?: boolean): Observable<HttpResponse<TutorialGroupDetailData>>;");
+        assertContains(api, "return this.http.get<TutorialGroupDetailData>(url, { observe, reportProgress });");
+        assertContains(api, "createTutorialGroup(courseId: number, createOrUpdateTutorialGroupRequest: CreateOrUpdateTutorialGroupRequest, observe?: 'body', reportProgress?: boolean): Observable<TutorialGroupDetailData>;");
+        assertContains(api, "return this.http.post<TutorialGroupDetailData>(url, createOrUpdateTutorialGroupRequest, { observe, reportProgress });");
+        assertContains(api, "return this.http.put<TutorialGroupDetailData>(url, createOrUpdateTutorialGroupRequest, { observe, reportProgress });");
         assertContains(api, "return this.http.delete<void>(url");
         assertFalse(api.contains("this.http.POST"));
         assertFalse(api.contains("this.http.PUT"));
-        assertFalse(api.contains("getTutorialGroup("));
 
-        String model = Files.readString(tempDir.resolve("models/tutorial-group-detail-data.ts"));
+        assertContains(api, "exportTutorialGroupsToCSV(courseId: number, fields: Array<string>, observe?: 'body', reportProgress?: boolean): Observable<Blob>;");
+        assertContains(api, "exportTutorialGroupsToCSV(courseId: number, fields: Array<string>, observe?: 'response', reportProgress?: boolean): Observable<HttpResponse<Blob>>;");
+        assertContains(api, "exportTutorialGroupsToCSV(courseId: number, fields: Array<string>, observe?: 'events', reportProgress?: boolean): Observable<HttpEvent<Blob>>;");
+        assertContains(api, "return this.http.get<Blob>(url, { observe, reportProgress, responseType: 'blob' as 'blob' });");
+        assertFalse(api.contains("return this.http.get<TutorialGroupDetailData>(url, { observe, reportProgress, responseType"));
+
+        assertContains(api, "getTutorialGroupAvatarResource(courseId: Signal<number> | number, tutorialGroupId: Signal<number> | number): HttpResourceRef<Blob | undefined>");
+        assertContains(api, "return httpResource.blob(() => {");
+        assertFalse(api.contains("httpResource<Blob>"));
+
+        String freePeriodApiContent = Files.readString(freePeriodApi);
+        assertContains(freePeriodApiContent, "getTutorialGroupFreePeriod(courseId: number, configurationId: number, freePeriodId: number, observe?: 'body', reportProgress?: boolean): Observable<TutorialGroupFreePeriod>;");
+        assertFalse(freePeriodApiContent.contains("httpResource"));
+
+        String model = Files.readString(tempDir.resolve("model/tutorialGroupDetailData.ts"));
         assertContains(model, "readonly id: number;");
         assertContains(model, "readonly title: string;");
 
-        String configurationModel = Files.readString(tempDir.resolve("models/tutorial-group-configuration.ts"));
-        assertContains(configurationModel, "import type { TutorialGroupFreePeriod } from './tutorial-group-free-period';");
+        String configurationModel = Files.readString(tempDir.resolve("model/tutorialGroupConfiguration.ts"));
+        assertContains(configurationModel, "import type { TutorialGroupFreePeriod } from './tutorialGroupFreePeriod';");
         assertFalse(configurationModel.contains("from 'tutorial-group-free-period'"));
 
-        String requestModel = Files.readString(tempDir.resolve("models/create-or-update-tutorial-group-request.ts"));
+        String requestModel = Files.readString(tempDir.resolve("model/createOrUpdateTutorialGroupRequest.ts"));
         assertContains(requestModel, "title: string;");
         assertFalse(requestModel.contains("readonly title"));
     }

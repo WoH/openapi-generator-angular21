@@ -5,7 +5,6 @@
 package de.tum.cit.aet.openapi;
 
 import io.swagger.v3.oas.models.OpenAPI;
-import io.swagger.v3.oas.models.Operation;
 import org.openapitools.codegen.*;
 import org.openapitools.codegen.languages.TypeScriptAngularClientCodegen;
 import org.openapitools.codegen.model.ModelMap;
@@ -18,6 +17,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.*;
+import java.util.stream.Collectors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -46,6 +46,12 @@ public class Angular21Generator extends TypeScriptAngularClientCodegen {
     public static final String SEPARATE_RESOURCES = "separateResources";
     /** Config option for adding readonly modifiers to response models. */
     public static final String READONLY_MODELS = "readonlyModels";
+    /** Config option for selecting GET operations that should be generated as httpResource methods. */
+    public static final String HTTP_RESOURCE_OPERATIONS = "httpResourceOperations";
+    /** OpenAPI operation vendor extension for selecting httpResource generation. */
+    public static final String HTTP_RESOURCE_VENDOR_EXTENSION = "x-angular-http-resource";
+    /** Config option for preserving the existing TypeScript Angular file and class names. */
+    public static final String LEGACY_NAMING = "legacyNaming";
 
     /** Whether to generate httpResource-based GET resources. */
     protected boolean useHttpResource = true;
@@ -55,6 +61,10 @@ public class Angular21Generator extends TypeScriptAngularClientCodegen {
     protected boolean separateResources = true;
     /** Whether to add readonly modifiers to response models. */
     protected boolean readonlyModels = true;
+    /** Operation IDs that should be generated as httpResource methods. */
+    protected Set<String> httpResourceOperations = new HashSet<>();
+    /** Whether to preserve the existing TypeScript Angular generated names. */
+    protected boolean legacyNaming = true;
 
     /** Creates a configured Angular 21 generator with default options. */
     public Angular21Generator() {
@@ -70,9 +80,11 @@ public class Angular21Generator extends TypeScriptAngularClientCodegen {
         modelTemplateFiles.clear();
         modelTemplateFiles.put("model.mustache", ".ts");
 
-        apiNameSuffix = "Api";
+        serviceSuffix = "ApiService";
+        serviceFileSuffix = "Api.service";
+        fileNaming = "camelCase";
         apiTemplateFiles.clear();
-        apiTemplateFiles.put("api-service.mustache", "-api.ts");
+        apiTemplateFiles.put("api-service.mustache", ".ts");
 
         // Add resource templates for GET operations
         supportingFiles.clear();
@@ -89,6 +101,11 @@ public class Angular21Generator extends TypeScriptAngularClientCodegen {
                 .defaultValue("true"));
         cliOptions.add(new CliOption(READONLY_MODELS,
                 "Add readonly modifier to model properties")
+                .defaultValue("true"));
+        cliOptions.add(new CliOption(HTTP_RESOURCE_OPERATIONS,
+                "Comma-separated GET operationIds generated as httpResource methods. GET operations not listed are generated as Observable methods."));
+        cliOptions.add(new CliOption(LEGACY_NAMING,
+                "Preserve existing TypeScript Angular file and class names")
                 .defaultValue("true"));
     }
 
@@ -107,8 +124,9 @@ public class Angular21Generator extends TypeScriptAngularClientCodegen {
     public void processOpts() {
         super.processOpts();
 
-        // Replace base generator supporting files with our template set only.
+        // Replace base generator supporting files with the small set this template uses.
         supportingFiles.clear();
+        supportingFiles.add(new SupportingFile("configuration.mustache", "", "configuration.ts"));
 
         // Process custom options
         if (additionalProperties.containsKey(USE_HTTP_RESOURCE)) {
@@ -131,16 +149,21 @@ public class Angular21Generator extends TypeScriptAngularClientCodegen {
         }
         additionalProperties.put(READONLY_MODELS, readonlyModels);
 
-        // Add resource template if enabled
-        if (useHttpResource && separateResources) {
-            apiTemplateFiles.put("api-resource.mustache", "-resources.ts");
+        if (additionalProperties.containsKey(HTTP_RESOURCE_OPERATIONS)) {
+            httpResourceOperations = parseOperationIdSet(additionalProperties.get(HTTP_RESOURCE_OPERATIONS));
         }
+        additionalProperties.put(HTTP_RESOURCE_OPERATIONS, String.join(",", httpResourceOperations));
+
+        if (additionalProperties.containsKey(LEGACY_NAMING)) {
+            legacyNaming = Boolean.parseBoolean(additionalProperties.get(LEGACY_NAMING).toString());
+        }
+        additionalProperties.put(LEGACY_NAMING, legacyNaming);
 
         // Update supporting files
 
         LOGGER.info("Angular21 Generator initialized with: useHttpResource={}, useInjectFunction={}, " +
-                "separateResources={}, readonlyModels={}",
-                useHttpResource, useInjectFunction, separateResources, readonlyModels);
+                "separateResources={}, readonlyModels={}, httpResourceOperations={}, legacyNaming={}",
+                useHttpResource, useInjectFunction, separateResources, readonlyModels, httpResourceOperations, legacyNaming);
     }
 
     @Override
@@ -151,44 +174,21 @@ public class Angular21Generator extends TypeScriptAngularClientCodegen {
             openapiGeneratorIgnoreList = new HashSet<>();
         }
 
-        Map<String, TagUsage> usageByTag = new HashMap<>();
-        if (openAPI != null && openAPI.getPaths() != null) {
-            openAPI.getPaths().forEach((path, pathItem) -> {
-                if (pathItem == null) {
-                    return;
-                }
-                addOperationUsage(pathItem.getGet(), true, usageByTag);
-                addOperationUsage(pathItem.getPost(), false, usageByTag);
-                addOperationUsage(pathItem.getPut(), false, usageByTag);
-                addOperationUsage(pathItem.getDelete(), false, usageByTag);
-                addOperationUsage(pathItem.getPatch(), false, usageByTag);
-                addOperationUsage(pathItem.getHead(), false, usageByTag);
-                addOperationUsage(pathItem.getOptions(), false, usageByTag);
-                addOperationUsage(pathItem.getTrace(), false, usageByTag);
-            });
-        }
-
-        for (Map.Entry<String, TagUsage> entry : usageByTag.entrySet()) {
-            String apiFilename = toApiFilename(entry.getKey());
-            TagUsage usage = entry.getValue();
-            if (!usage.hasMutation) {
-                openapiGeneratorIgnoreList.add("api/" + apiFilename + "-api.ts");
-            }
-            if (useHttpResource && separateResources && !usage.hasGet) {
-                openapiGeneratorIgnoreList.add("api/" + apiFilename + "-resources.ts");
-            }
-        }
     }
 
     @Override
     public String toModelFilename(String name) {
-        // Use kebab-case for filenames without .model suffix (new Angular style guide)
+        if (legacyNaming) {
+            return super.toModelFilename(name);
+        }
         return toKebabCase(name);
     }
 
     @Override
     public String toApiFilename(String name) {
-        // Use kebab-case for API files
+        if (legacyNaming) {
+            return super.toApiFilename(name);
+        }
         return toKebabCase(name);
     }
 
@@ -197,11 +197,18 @@ public class Angular21Generator extends TypeScriptAngularClientCodegen {
         if (importMapping.containsKey(name)) {
             return importMapping.get(name);
         }
-        return "../models/" + toModelFilename(removeModelPrefixSuffix(name));
+        String filename = toModelFilename(removeModelPrefixSuffix(name));
+        while (filename.startsWith("./")) {
+            filename = filename.substring(2);
+        }
+        return "../model/" + filename;
     }
 
     @Override
     public String toApiName(String name) {
+        if (legacyNaming) {
+            return super.toApiName(name);
+        }
         return StringUtils.camelize(name) + "Api";
     }
 
@@ -214,31 +221,6 @@ public class Angular21Generator extends TypeScriptAngularClientCodegen {
             normalized = "operation";
         }
         return normalized;
-    }
-
-    private void addOperationUsage(Operation operation, boolean isGet, Map<String, TagUsage> usageByTag) {
-        if (operation == null) {
-            return;
-        }
-
-        List<String> tags = operation.getTags();
-        if (tags == null || tags.isEmpty()) {
-            tags = Collections.singletonList("default");
-        }
-        for (String tag : tags) {
-            String sanitizedTag = sanitizeTag(tag);
-            TagUsage usage = usageByTag.computeIfAbsent(sanitizedTag, key -> new TagUsage());
-            if (isGet) {
-                usage.hasGet = true;
-            } else {
-                usage.hasMutation = true;
-            }
-        }
-    }
-
-    private static final class TagUsage {
-        private boolean hasGet;
-        private boolean hasMutation;
     }
 
     @Override
@@ -271,27 +253,36 @@ public class Angular21Generator extends TypeScriptAngularClientCodegen {
 
     @Override
     public OperationsMap postProcessOperationsWithModels(OperationsMap objs, List<ModelMap> allModels) {
+        OperationMap operationsBefore = objs.getOperations();
+        Map<String, String> originalPaths = new HashMap<>();
+        for (CodegenOperation op : operationsBefore.getOperation()) {
+            originalPaths.put(op.operationId, op.path);
+        }
+
         OperationsMap result = super.postProcessOperationsWithModels(objs, allModels);
 
         OperationMap operations = result.getOperations();
         List<CodegenOperation> ops = operations.getOperation();
 
-        // Separate GET operations from mutations
-        List<CodegenOperation> getOperations = new ArrayList<>();
-        List<CodegenOperation> mutationOperations = new ArrayList<>();
+        List<CodegenOperation> resourceOperations = new ArrayList<>();
 
         for (CodegenOperation op : ops) {
             // Add custom vendor extensions
             op.vendorExtensions.put("x-use-inject", useInjectFunction);
+            boolean isGet = "GET".equalsIgnoreCase(op.httpMethod);
+            boolean useResource = isGet && shouldGenerateHttpResource(op);
 
-            if ("GET".equalsIgnoreCase(op.httpMethod)) {
+            if (isGet) {
                 op.vendorExtensions.put("x-is-get", true);
-                op.vendorExtensions.put("x-use-http-resource", useHttpResource);
-                getOperations.add(op);
             } else {
                 op.vendorExtensions.put("x-is-get", false);
                 op.vendorExtensions.put("x-is-mutation", true);
-                mutationOperations.add(op);
+            }
+            op.vendorExtensions.put("x-use-http-resource", useResource);
+            op.vendorExtensions.put("x-is-resource-operation", useResource);
+            op.vendorExtensions.put("x-is-observable-operation", !useResource);
+            if (useResource) {
+                resourceOperations.add(op);
             }
 
             // Process path parameters
@@ -300,9 +291,9 @@ public class Angular21Generator extends TypeScriptAngularClientCodegen {
             // Process query parameters
             processQueryParameters(op);
 
-            // Build URL path templates without relying on the default Configuration encoder.
-            String pathTemplate = buildPathTemplate(op, false);
-            String resourcePathTemplate = buildPathTemplate(op, true);
+            String originalPath = originalPaths.getOrDefault(op.operationId, op.path);
+            String pathTemplate = buildPathTemplate(op, originalPath, false);
+            String resourcePathTemplate = buildPathTemplate(op, originalPath, true);
             op.vendorExtensions.put("xPathTemplate", pathTemplate);
             op.vendorExtensions.put("xResourcePathTemplate", resourcePathTemplate);
             if (pathTemplate != null && !pathTemplate.isBlank()) {
@@ -310,37 +301,32 @@ public class Angular21Generator extends TypeScriptAngularClientCodegen {
             }
         }
 
-        // Add to vendor extensions for template access
-        operations.put("getOperations", getOperations);
-        operations.put("mutationOperations", mutationOperations);
-        operations.put("hasGetOperations", !getOperations.isEmpty());
-        operations.put("hasMutationOperations", !mutationOperations.isEmpty());
-        result.put("resourceImports", filterImports(result.getImports(), getOperations));
-        result.put("mutationImports", filterImports(result.getImports(), mutationOperations));
+        operations.put("resourceOperations", resourceOperations);
+        operations.put("hasResourceOperations", !resourceOperations.isEmpty());
+        result.put("hasResourceOperations", !resourceOperations.isEmpty());
 
         return result;
     }
 
-    private List<Map<String, String>> filterImports(List<Map<String, String>> imports, List<CodegenOperation> operations) {
-        if (imports == null || imports.isEmpty() || operations.isEmpty()) {
-            return Collections.emptyList();
+    private boolean shouldGenerateHttpResource(CodegenOperation operation) {
+        if (!useHttpResource) {
+            return false;
         }
+        Object extensionValue = operation.vendorExtensions.get(HTTP_RESOURCE_VENDOR_EXTENSION);
+        if (extensionValue != null) {
+            return Boolean.parseBoolean(extensionValue.toString());
+        }
+        return httpResourceOperations.contains(operation.operationId) || httpResourceOperations.contains(operation.nickname);
+    }
 
-        Set<String> usedImports = new HashSet<>();
-        for (CodegenOperation operation : operations) {
-            if (operation.imports != null) {
-                usedImports.addAll(operation.imports);
-            }
+    private Set<String> parseOperationIdSet(Object value) {
+        if (value == null) {
+            return new HashSet<>();
         }
-
-        List<Map<String, String>> filteredImports = new ArrayList<>();
-        for (Map<String, String> importEntry : imports) {
-            String className = importEntry.get("classname");
-            if (usedImports.contains(className)) {
-                filteredImports.add(importEntry);
-            }
+        if (value instanceof Collection<?> collection) {
+            return collection.stream().map(Object::toString).map(String::trim).filter(entry -> !entry.isEmpty()).collect(Collectors.toCollection(HashSet::new));
         }
-        return filteredImports;
+        return Arrays.stream(value.toString().split(",")).map(String::trim).filter(entry -> !entry.isEmpty()).collect(Collectors.toCollection(HashSet::new));
     }
 
     /**
@@ -367,9 +353,14 @@ public class Angular21Generator extends TypeScriptAngularClientCodegen {
             String paramsInterfaceName = toPascalCase(op.operationId) + "Params";
             op.vendorExtensions.put("x-params-interface-name", paramsInterfaceName);
 
+            boolean allOptional = true;
             for (CodegenParameter param : op.queryParams) {
                 param.vendorExtensions.put("x-ts-name", toCamelCase(param.paramName));
+                if (param.required) {
+                    allOptional = false;
+                }
             }
+            op.vendorExtensions.put("x-all-query-params-optional", allOptional);
         } else {
             op.vendorExtensions.put("x-has-query-params", false);
         }
@@ -378,74 +369,29 @@ public class Angular21Generator extends TypeScriptAngularClientCodegen {
     /**
      * Build a URL path template that encodes path params without using Configuration.
      */
-    private String buildPathTemplate(CodegenOperation op, boolean useSignalValue) {
-        if (op.path == null) {
+    private String buildPathTemplate(CodegenOperation op, String originalPath, boolean useSignalValue) {
+        if (originalPath == null) {
             return null;
         }
 
-        String rawPath = unescapeHtmlEntities(op.path);
-        Map<String, String> signalValueByParamName = new HashMap<>();
-        Map<String, String> templateVarByParamName = new HashMap<>();
-        if (useSignalValue && op.pathParams != null) {
-            for (CodegenParameter param : op.pathParams) {
-                Object tsName = param.vendorExtensions.get("x-ts-name");
-                String baseName = tsName != null ? tsName.toString() : param.paramName;
-                signalValueByParamName.put(param.paramName, baseName + "Value");
-            }
-        }
+        String path = originalPath;
         if (op.pathParams != null) {
             for (CodegenParameter param : op.pathParams) {
                 Object tsName = param.vendorExtensions.get("x-ts-name");
                 String baseName = tsName != null ? tsName.toString() : param.paramName;
                 boolean isNumeric = Boolean.TRUE.equals(param.vendorExtensions.get("x-is-numeric"));
+                String valueVar;
                 if (useSignalValue) {
-                    templateVarByParamName.put(param.paramName, isNumeric ? baseName + "Value" : baseName + "Path");
+                    valueVar = isNumeric ? baseName + "Value" : baseName + "Path";
                 } else {
-                    templateVarByParamName.put(param.paramName, isNumeric ? baseName : baseName + "Path");
-                }
-            }
-        }
-
-        Pattern pattern = Pattern.compile("\\$\\{this\\.configuration\\.encodeParam\\([^)]*?value: ([^,}]+)[^)]*\\)\\}");
-        Matcher matcher = pattern.matcher(rawPath);
-        StringBuffer buffer = new StringBuffer();
-
-        while (matcher.find()) {
-            String valueVar = matcher.group(1).trim();
-            String replacementVar = valueVar;
-            if (templateVarByParamName.containsKey(valueVar)) {
-                replacementVar = templateVarByParamName.get(valueVar);
-            } else if (useSignalValue && signalValueByParamName.containsKey(valueVar)) {
-                replacementVar = signalValueByParamName.get(valueVar);
-            }
-            String replacement = "{" + replacementVar + "}";
-            matcher.appendReplacement(buffer, Matcher.quoteReplacement(replacement));
-        }
-        matcher.appendTail(buffer);
-
-        String path = buffer.toString();
-        if (op.pathParams != null) {
-            for (CodegenParameter param : op.pathParams) {
-                Object tsName = param.vendorExtensions.get("x-ts-name");
-                String baseName = tsName != null ? tsName.toString() : param.paramName;
-                String valueVar = useSignalValue ? baseName + "Value" : baseName;
-                if (templateVarByParamName.containsKey(param.paramName)) {
-                    valueVar = templateVarByParamName.get(param.paramName);
+                    valueVar = isNumeric ? baseName : baseName + "Path";
                 }
                 String placeholder = "{" + param.baseName + "}";
-                String generatedPlaceholder = "{" + valueVar + "}";
-                if (!generatedPlaceholder.equals(placeholder)) {
-                    path = path.replace(generatedPlaceholder, "${" + valueVar + "}");
-                }
                 path = path.replace(placeholder, "${" + valueVar + "}");
             }
         }
 
         return path;
-    }
-
-    private String unescapeHtmlEntities(String value) {
-        return value.replace("&quot;", "\"").replace("&#39;", "'");
     }
 
     private boolean isNumericParam(CodegenParameter param) {
@@ -510,6 +456,6 @@ public class Angular21Generator extends TypeScriptAngularClientCodegen {
 
     @Override
     public String modelFileFolder() {
-        return outputFolder + File.separator + "models";
+        return outputFolder + File.separator + "model";
     }
 }

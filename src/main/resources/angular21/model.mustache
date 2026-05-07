@@ -2,7 +2,7 @@
 {{#models}}
 {{#model}}
 {{#tsImports}}
-import type { {{classname}} } from './{{filename}}';
+import type { {{classname}} } from '{{filename}}';
 {{/tsImports}}
 
 {{#description}}
@@ -11,9 +11,12 @@ import type { {{classname}} } from './{{filename}}';
  */
 {{/description}}
 {{#isEnum}}
-export type {{classname}} = {{#allowableValues}}{{#enumVars}}{{{value}}}{{^-last}} | {{/-last}}{{/enumVars}}{{/allowableValues}};
+export const {{classname}} = {
+{{#allowableValues}}{{#enumVars}}    {{name}}: {{{value}}}{{^-last}},{{/-last}}
+{{/enumVars}}{{/allowableValues}}
+} as const;
 
-export const {{classname}}Values = [{{#allowableValues}}{{#enumVars}}{{{value}}}{{^-last}}, {{/-last}}{{/enumVars}}{{/allowableValues}}] as const;
+export type {{classname}} = typeof {{classname}}[keyof typeof {{classname}}];
 {{/isEnum}}
 {{^isEnum}}
 {{#hasVars}}
@@ -22,19 +25,23 @@ export interface {{classname}}{{#parent}} extends {{.}}{{/parent}} {
 {{#description}}
     /** {{{.}}} */
 {{/description}}
-{{#vendorExtensions.x-is-readonly}}    readonly {{/vendorExtensions.x-is-readonly}}{{^vendorExtensions.x-is-readonly}}    {{/vendorExtensions.x-is-readonly}}{{name}}{{^required}}?{{/required}}: {{#isEnum}}{{classname}}{{enumName}}{{/isEnum}}{{^isEnum}}{{{dataType}}}{{/isEnum}}{{#isNullable}} | null{{/isNullable}};
+{{#vendorExtensions.x-is-readonly}}    readonly {{/vendorExtensions.x-is-readonly}}{{^vendorExtensions.x-is-readonly}}    {{/vendorExtensions.x-is-readonly}}{{name}}{{^required}}?{{/required}}: {{#isEnum}}{{#isArray}}Array<{{classname}}.{{enumName}}>{{/isArray}}{{^isArray}}{{classname}}.{{enumName}}{{/isArray}}{{/isEnum}}{{^isEnum}}{{{dataType}}}{{/isEnum}}{{#isNullable}} | null{{/isNullable}};
 {{/vars}}
 }
 {{#hasEnums}}
 
+export namespace {{classname}} {
 {{#vars}}
 {{#isEnum}}
-export type {{classname}}{{enumName}} = {{#allowableValues}}{{#enumVars}}{{{value}}}{{^-last}} | {{/-last}}{{/enumVars}}{{/allowableValues}};
-
-export const {{classname}}{{enumName}}Values = [{{#allowableValues}}{{#enumVars}}{{{value}}}{{^-last}}, {{/-last}}{{/enumVars}}{{/allowableValues}}] as const;
+    export const {{enumName}} = {
+{{#allowableValues}}{{#enumVars}}        {{name}}: {{{value}}}{{^-last}},{{/-last}}
+{{/enumVars}}{{/allowableValues}}
+    } as const;
+    export type {{enumName}} = typeof {{enumName}}[keyof typeof {{enumName}}];
 
 {{/isEnum}}
 {{/vars}}
+}
 {{/hasEnums}}
 {{/hasVars}}
 {{^hasVars}}

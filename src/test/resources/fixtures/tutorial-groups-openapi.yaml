@@ -15,6 +15,7 @@ paths:
       tags:
         - tutorial-group
       operationId: getTutorialGroups
+      x-angular-http-resource: true
       summary: Get tutorial groups for a course
       parameters:
         - name: courseId
@@ -69,6 +70,62 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TutorialGroupDetailData'
+  /tutorialgroup/courses/{courseId}/tutorial-groups/export/csv:
+    get:
+      tags:
+        - tutorial-group
+      operationId: exportTutorialGroupsToCSV
+      summary: Export tutorial groups as CSV
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: fields
+          in: query
+          required: true
+          schema:
+            type: array
+            items:
+              type: string
+      responses:
+        '200':
+          description: CSV file
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+  /tutorialgroup/courses/{courseId}/tutorial-groups/{tutorialGroupId}/avatar:
+    get:
+      tags:
+        - tutorial-group
+      operationId: getTutorialGroupAvatar
+      x-angular-http-resource: true
+      summary: Get tutorial group avatar image
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: tutorialGroupId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Avatar image
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
   /tutorialgroup/courses/{courseId}/tutorial-groups/{tutorialGroupId}:
     get:
       tags:

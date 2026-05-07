@@ -1,23 +1,47 @@
 {{>licenseInfo}}
 /**
- * {{classname}} - API service for mutations (POST, PUT, DELETE, PATCH)
+ * {{classname}} - API service
  * @generated from OpenAPI specification
  */
-import { HttpClient{{#operations.operation}}{{#hasFormParams}}, HttpHeaders{{/hasFormParams}}{{/operations.operation}} } from '@angular/common/http';
-import { inject, Injectable } from '@angular/core';
+import { HttpClient, HttpEvent, HttpResponse{{#hasResourceOperations}}, httpResource, HttpResourceRef{{/hasResourceOperations}}{{#operations.operation}}{{#hasFormParams}}, HttpHeaders{{/hasFormParams}}{{/operations.operation}} } from '@angular/common/http';
+import { inject, Injectable{{#hasResourceOperations}}, Signal{{/hasResourceOperations}} } from '@angular/core';
 import { Observable } from 'rxjs';
-{{#mutationImports}}
+import { Configuration } from '../configuration';
+{{#imports}}
 import { {{classname}} } from '{{filename}}';
-{{/mutationImports}}
+{{/imports}}
+
+{{#hasResourceOperations}}
+const BASE_PATH = '{{contextPath}}';
+{{/hasResourceOperations}}
+
+{{#operations}}
+{{#operation}}
+{{#vendorExtensions.x-is-resource-operation}}
+{{#vendorExtensions.x-has-query-params}}
+/**
+ * Query parameters for {{nickname}}Resource
+ */
+export interface {{vendorExtensions.x-params-interface-name}} {
+{{#queryParams}}
+    {{vendorExtensions.x-ts-name}}{{^required}}?{{/required}}: {{{dataType}}};
+{{/queryParams}}
+}
+
+{{/vendorExtensions.x-has-query-params}}
+{{/vendorExtensions.x-is-resource-operation}}
+{{/operation}}
+{{/operations}}
 
 @Injectable({ providedIn: 'root' })
 export class {{classname}} {
     private readonly http = inject(HttpClient);
-    private readonly basePath = '{{contextPath}}';
+    private readonly configuration = inject(Configuration, { optional: true });
+    private readonly basePath = this.configuration?.basePath ?? '{{contextPath}}';
 
 {{#operations}}
 {{#operation}}
-{{^vendorExtensions.x-is-get}}
+{{#vendorExtensions.x-is-observable-operation}}
     /**
      * {{summary}}
      * {{notes}}
@@ -25,25 +49,28 @@ export class {{classname}} {
      * @param {{paramName}} {{description}}
 {{/allParams}}
      */
-    {{nickname}}({{#allParams}}{{paramName}}{{^required}}?{{/required}}: {{{dataType}}}{{^-last}}, {{/-last}}{{/allParams}}): Observable<{{#returnType}}{{{.}}}{{/returnType}}{{^returnType}}void{{/returnType}}> {
+    {{nickname}}({{#allParams}}{{paramName}}{{^required}}?{{/required}}: {{{dataType}}}, {{/allParams}}observe?: 'body', reportProgress?: boolean): Observable<{{#returnType}}{{{.}}}{{/returnType}}{{^returnType}}void{{/returnType}}>;
+    {{nickname}}({{#allParams}}{{paramName}}{{^required}}?{{/required}}: {{{dataType}}}, {{/allParams}}observe?: 'response', reportProgress?: boolean): Observable<HttpResponse<{{#returnType}}{{{.}}}{{/returnType}}{{^returnType}}void{{/returnType}}>>;
+    {{nickname}}({{#allParams}}{{paramName}}{{^required}}?{{/required}}: {{{dataType}}}, {{/allParams}}observe?: 'events', reportProgress?: boolean): Observable<HttpEvent<{{#returnType}}{{{.}}}{{/returnType}}{{^returnType}}void{{/returnType}}>>;
+    {{nickname}}({{#allParams}}{{paramName}}{{^required}}?{{/required}}: {{{dataType}}}, {{/allParams}}observe: any = 'body', reportProgress: boolean = false): Observable<any> {
 {{#pathParams}}
 {{^vendorExtensions.x-is-numeric}}
         const {{paramName}}Path = encodeURIComponent(String({{paramName}}));
 {{/vendorExtensions.x-is-numeric}}
 {{/pathParams}}
 {{#hasQueryParams}}
-        const queryParams: Record<string, string> = {};
+        const queryParams = new URLSearchParams();
 {{#queryParams}}
         if ({{paramName}} !== undefined && {{paramName}} !== null) {
 {{#isArray}}
-            queryParams['{{baseName}}'] = {{paramName}}.join(',');
+            {{paramName}}.forEach(item => queryParams.append('{{baseName}}', String(item)));
 {{/isArray}}
 {{^isArray}}
-            queryParams['{{baseName}}'] = String({{paramName}});
+            queryParams.set('{{baseName}}', String({{paramName}}));
 {{/isArray}}
         }
 {{/queryParams}}
-        const queryString = new URLSearchParams(queryParams).toString();
+        const queryString = queryParams.toString();
         const url = `${this.basePath}{{{vendorExtensions.xPathTemplate}}}${queryString ? `?${queryString}` : ''}`;
 {{/hasQueryParams}}
 {{^hasQueryParams}}
@@ -61,26 +88,91 @@ export class {{classname}} {
 {{/isArray}}
         }
 {{/formParams}}
-        return this.http.{{httpMethod}}{{#returnType}}<{{{.}}}>{{/returnType}}{{^returnType}}<void>{{/returnType}}(url, formData);
+        return this.http.{{httpMethod}}<{{#returnType}}{{{.}}}{{/returnType}}{{^returnType}}void{{/returnType}}>(url, formData, { observe, reportProgress{{#isResponseFile}}, responseType: 'blob' as 'blob'{{/isResponseFile}} });
 {{/hasFormParams}}
 {{^hasFormParams}}
 {{#bodyParam}}
-        return this.http.{{httpMethod}}{{#returnType}}<{{{.}}}>{{/returnType}}{{^returnType}}<void>{{/returnType}}(url, {{paramName}});
+        return this.http.{{httpMethod}}<{{#returnType}}{{{.}}}{{/returnType}}{{^returnType}}void{{/returnType}}>(url, {{paramName}}, { observe, reportProgress{{#isResponseFile}}, responseType: 'blob' as 'blob'{{/isResponseFile}} });
 {{/bodyParam}}
 {{^bodyParam}}
+{{#isBodyAllowed}}
+        return this.http.{{httpMethod}}<{{#returnType}}{{{.}}}{{/returnType}}{{^returnType}}void{{/returnType}}>(url, null, { observe, reportProgress{{#isResponseFile}}, responseType: 'blob' as 'blob'{{/isResponseFile}} });
+{{/isBodyAllowed}}
+{{^isBodyAllowed}}
 {{#hasQueryParams}}
-        return this.http.{{httpMethod}}{{#returnType}}<{{{.}}}>{{/returnType}}{{^returnType}}<void>{{/returnType}}(url);
+        return this.http.{{httpMethod}}<{{#returnType}}{{{.}}}{{/returnType}}{{^returnType}}void{{/returnType}}>(url, { observe, reportProgress{{#isResponseFile}}, responseType: 'blob' as 'blob'{{/isResponseFile}} });
 {{/hasQueryParams}}
 {{^hasQueryParams}}
+{{#vendorExtensions.x-is-get}}
+        return this.http.{{httpMethod}}<{{#returnType}}{{{.}}}{{/returnType}}{{^returnType}}void{{/returnType}}>(url, { observe, reportProgress{{#isResponseFile}}, responseType: 'blob' as 'blob'{{/isResponseFile}} });
+{{/vendorExtensions.x-is-get}}
 {{#vendorExtensions.x-is-mutation}}
-        return this.http.{{httpMethod}}{{#returnType}}<{{{.}}}>{{/returnType}}{{^returnType}}<void>{{/returnType}}(url{{#isBodyAllowed}}, null{{/isBodyAllowed}});
+        return this.http.{{httpMethod}}<{{#returnType}}{{{.}}}{{/returnType}}{{^returnType}}void{{/returnType}}>(url{{#isBodyAllowed}}, null{{/isBodyAllowed}}, { observe, reportProgress{{#isResponseFile}}, responseType: 'blob' as 'blob'{{/isResponseFile}} });
 {{/vendorExtensions.x-is-mutation}}
 {{/hasQueryParams}}
+{{/isBodyAllowed}}
 {{/bodyParam}}
 {{/hasFormParams}}
     }
 
-{{/vendorExtensions.x-is-get}}
+{{/vendorExtensions.x-is-observable-operation}}
+{{#vendorExtensions.x-is-resource-operation}}
+    /**
+     * {{summary}}
+     * {{notes}}
+     * Creates a reactive HTTP resource that automatically refetches when signals change.
+{{#pathParams}}
+     * @param {{vendorExtensions.x-ts-name}} {{description}}
+{{/pathParams}}
+{{#vendorExtensions.x-has-query-params}}
+     * @param params Signal containing query parameters
+{{/vendorExtensions.x-has-query-params}}
+     */
+    {{nickname}}Resource({{#pathParams}}{{vendorExtensions.x-ts-name}}: Signal<{{{dataType}}}> | {{{dataType}}}{{^-last}}, {{/-last}}{{/pathParams}}{{#vendorExtensions.x-has-query-params}}{{#hasPathParams}}, {{/hasPathParams}}{{#vendorExtensions.x-all-query-params-optional}}params?: Signal<{{vendorExtensions.x-params-interface-name}}>{{/vendorExtensions.x-all-query-params-optional}}{{^vendorExtensions.x-all-query-params-optional}}params: Signal<{{vendorExtensions.x-params-interface-name}}>{{/vendorExtensions.x-all-query-params-optional}}{{/vendorExtensions.x-has-query-params}}): HttpResourceRef<{{#isResponseFile}}Blob{{/isResponseFile}}{{^isResponseFile}}{{#returnType}}{{{.}}}{{/returnType}}{{^returnType}}unknown{{/returnType}}{{/isResponseFile}} | undefined> {
+        return httpResource{{#isResponseFile}}.blob{{/isResponseFile}}{{^isResponseFile}}<{{#returnType}}{{{.}}}{{/returnType}}{{^returnType}}unknown{{/returnType}}>{{/isResponseFile}}(() => {
+{{#pathParams}}
+            const {{vendorExtensions.x-ts-name}}Value = typeof {{vendorExtensions.x-ts-name}} === 'function' ? {{vendorExtensions.x-ts-name}}() : {{vendorExtensions.x-ts-name}};
+{{^vendorExtensions.x-is-numeric}}
+            const {{vendorExtensions.x-ts-name}}Path = encodeURIComponent(String({{vendorExtensions.x-ts-name}}Value));
+{{/vendorExtensions.x-is-numeric}}
+{{/pathParams}}
+{{#vendorExtensions.x-has-query-params}}
+{{#vendorExtensions.x-all-query-params-optional}}
+            const queryParams = params?.() ?? {};
+{{/vendorExtensions.x-all-query-params-optional}}
+{{^vendorExtensions.x-all-query-params-optional}}
+            const queryParams = params();
+{{/vendorExtensions.x-all-query-params-optional}}
+            const searchParams = new URLSearchParams();
+{{#queryParams}}
+{{#isArray}}
+            if (queryParams.{{vendorExtensions.x-ts-name}}?.length) {
+                queryParams.{{vendorExtensions.x-ts-name}}.forEach(value => searchParams.append('{{baseName}}', String(value)));
+            }
+{{/isArray}}
+{{^isArray}}
+{{#isBoolean}}
+            if (queryParams.{{vendorExtensions.x-ts-name}} !== undefined) {
+                searchParams.set('{{baseName}}', String(queryParams.{{vendorExtensions.x-ts-name}}));
+            }
+{{/isBoolean}}
+{{^isBoolean}}
+            if (queryParams.{{vendorExtensions.x-ts-name}} !== undefined && queryParams.{{vendorExtensions.x-ts-name}} !== null) {
+                searchParams.set('{{baseName}}', String(queryParams.{{vendorExtensions.x-ts-name}}));
+            }
+{{/isBoolean}}
+{{/isArray}}
+{{/queryParams}}
+            const query = searchParams.toString();
+            return `${BASE_PATH}{{{vendorExtensions.xResourcePathTemplate}}}${query ? `?${query}` : ''}`;
+{{/vendorExtensions.x-has-query-params}}
+{{^vendorExtensions.x-has-query-params}}
+            return `${BASE_PATH}{{{vendorExtensions.xResourcePathTemplate}}}`;
+{{/vendorExtensions.x-has-query-params}}
+        });
+    }
+
+{{/vendorExtensions.x-is-resource-operation}}
 {{/operation}}
 {{/operations}}
 }

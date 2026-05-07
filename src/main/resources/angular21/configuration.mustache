@@ -1,0 +1,19 @@
+{{>licenseInfo}}
+export interface ConfigurationParameters {
+    basePath?: string;
+    withCredentials?: boolean;
+}
+
+export class Configuration {
+    basePath?: string;
+    withCredentials?: boolean;
+
+    constructor({ basePath, withCredentials }: ConfigurationParameters = {}) {
+        if (basePath !== undefined) {
+            this.basePath = basePath;
+        }
+        if (withCredentials !== undefined) {
+            this.withCredentials = withCredentials;
+        }
+    }
+}
