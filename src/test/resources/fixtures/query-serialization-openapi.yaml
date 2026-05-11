@@ -1,0 +1,43 @@
+openapi: 3.1.1
+info:
+  title: Query Serialization API
+  version: 1.0.0
+servers:
+  - url: /api
+tags:
+  - name: query
+paths:
+  /query/items:
+    get:
+      tags:
+        - query
+      operationId: getItems
+      x-angular-http-resource: true
+      summary: Get items
+      parameters:
+        - name: ids
+          in: query
+          required: false
+          style: form
+          explode: false
+          schema:
+            type: array
+            items:
+              type: integer
+              format: int64
+        - name: tags
+          in: query
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+      responses:
+        '200':
+          description: Items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string

@@ -7,7 +7,7 @@ A custom [OpenAPI Generator](https://openapi-generator.tech/) for generating mod
 
 ## Features
 
-- **Signal-based `httpResource`** for GET requests (reactive, auto-refetching)
+- **Signal-based `httpResource`** for selected GET requests (reactive, auto-refetching)
 - **Injectable services** with `inject()` function for mutations (POST, PUT, DELETE)
 - **Standalone services** (`providedIn: 'root'`, no NgModules required)
 - **Strict TypeScript** with `readonly` modifiers on response models
@@ -143,7 +143,6 @@ openApiGenerate {
     outputDir.set("$buildDir/generated/openapi")
     
     configOptions.set(mapOf(
-        "useHttpResource" to "true",
         "useInjectFunction" to "true",
         "separateResources" to "true",
         "readonlyModels" to "true"
@@ -168,7 +167,6 @@ openApiGenerate {
     inputSpec = "$projectDir/src/main/resources/openapi.yaml"
     outputDir = "$buildDir/generated/openapi"
     configOptions = [
-        useHttpResource : 'true',
         useInjectFunction: 'true',
         separateResources: 'true',
         readonlyModels   : 'true'
@@ -193,7 +191,6 @@ openApiGenerate {
                 <inputSpec>${project.basedir}/src/main/resources/openapi.yaml</inputSpec>
                 <output>${project.build.directory}/generated-sources/openapi</output>
                 <configOptions>
-                    <useHttpResource>true</useHttpResource>
                     <useInjectFunction>true</useInjectFunction>
                     <separateResources>true</separateResources>
                     <readonlyModels>true</readonlyModels>
@@ -225,14 +222,14 @@ java -cp openapi-generator-angular21-1.0.0.jar:openapi-generator-cli-7.18.0.jar 
     -o ./generated
 ```
 
-## Configuration Options
+## Generator Options
 
-| Option              | Default | Description                                                 |
-|---------------------|---------|-------------------------------------------------------------|
-| `useHttpResource`   | `true`  | Use `httpResource` for GET requests instead of `HttpClient` |
-| `useInjectFunction` | `true`  | Use `inject()` function instead of constructor injection    |
-| `separateResources` | `true`  | Generate separate `*-resources.ts` files for GET operations |
-| `readonlyModels`    | `true`  | Add `readonly` modifier to response model properties        |
+| Option                   | Default | Description                                                                 |
+|--------------------------|---------|-----------------------------------------------------------------------------|
+| `useInjectFunction`      | `true`  | Use `inject()` function instead of constructor injection                    |
+| `separateResources`      | `true`  | Generate separate `*-resources.ts` files for GET operations                 |
+| `readonlyModels`         | `true`  | Add `readonly` modifier to response model properties                        |
+| `httpResourceOperations` | `""`    | Comma-separated GET operationIds generated as `httpResource` methods        |
 
 ## Usage in Components
 

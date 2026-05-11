@@ -51,7 +51,12 @@ export function {{nickname}}Resource({{#pathParams}}{{vendorExtensions.x-ts-name
 {{#queryParams}}
 {{#isArray}}
         if (queryParams.{{vendorExtensions.x-ts-name}}?.length) {
+{{#vendorExtensions.x-query-array-exploded}}
             queryParams.{{vendorExtensions.x-ts-name}}.forEach(value => searchParams.append('{{baseName}}', String(value)));
+{{/vendorExtensions.x-query-array-exploded}}
+{{^vendorExtensions.x-query-array-exploded}}
+            searchParams.set('{{baseName}}', queryParams.{{vendorExtensions.x-ts-name}}.map(value => String(value)).join('{{vendorExtensions.x-query-array-delimiter}}'));
+{{/vendorExtensions.x-query-array-exploded}}
         }
 {{/isArray}}
 {{^isArray}}

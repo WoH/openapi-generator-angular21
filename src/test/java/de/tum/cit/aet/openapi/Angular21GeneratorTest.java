@@ -106,6 +106,19 @@ class Angular21GeneratorTest {
         assertFalse(configuration.contains("from './tutorialGroupFreePeriod'"));
     }
 
+    @Test
+    void respectsExplodeFalseForArrayQueryParameters() throws IOException {
+        generateFixture("fixtures/query-serialization-openapi.yaml", tempDir);
+
+        String api = Files.readString(tempDir.resolve("api/queryApi.service.ts"));
+        assertContains(api, "queryParams.set('ids', ids.map(item => String(item)).join(','));");
+        assertContains(api, "tags.forEach(item => queryParams.append('tags', String(item)));");
+        assertContains(api, "searchParams.set('ids', queryParams.ids.map(value => String(value)).join(','));");
+        assertContains(api, "queryParams.tags.forEach(value => searchParams.append('tags', String(value)));");
+        assertFalse(api.contains("ids.forEach(item => queryParams.append('ids'"));
+        assertFalse(api.contains("queryParams.ids.forEach(value => searchParams.append('ids'"));
+    }
+
     private static void generateFixture(String fixture, Path outputDir) {
         generateFixture(fixture, outputDir, Map.of());
     }

@@ -24,7 +24,7 @@ import java.util.regex.Pattern;
 /**
  * OpenAPI Generator for Angular 21 with modern best practices:
  * <ul>
- *   <li>Signal-based httpResource for GET requests</li>
+ *   <li>Signal-based httpResource for selected GET requests</li>
  *   <li>Injectable services with inject() function for mutations</li>
  *   <li>Standalone services (providedIn: 'root')</li>
  *   <li>Strict TypeScript with readonly modifiers</li>
@@ -38,8 +38,6 @@ public class Angular21Generator extends TypeScriptAngularClientCodegen {
 
     /** Generator name used by the OpenAPI Generator SPI and CLI. */
     public static final String GENERATOR_NAME = "angular21";
-    /** Config option for enabling httpResource-based GET resources. */
-    public static final String USE_HTTP_RESOURCE = "useHttpResource";
     /** Config option for enabling inject() instead of constructor injection. */
     public static final String USE_INJECT_FUNCTION = "useInjectFunction";
     /** Config option for generating separate resource files for GET operations. */
@@ -53,8 +51,6 @@ public class Angular21Generator extends TypeScriptAngularClientCodegen {
     /** Config option for preserving the existing TypeScript Angular file and class names. */
     public static final String LEGACY_NAMING = "legacyNaming";
 
-    /** Whether to generate httpResource-based GET resources. */
-    protected boolean useHttpResource = true;
     /** Whether to use Angular inject() for service dependencies. */
     protected boolean useInjectFunction = true;
     /** Whether to place GET resources in separate files. */
@@ -90,9 +86,6 @@ public class Angular21Generator extends TypeScriptAngularClientCodegen {
         supportingFiles.clear();
 
         // CLI options
-        cliOptions.add(new CliOption(USE_HTTP_RESOURCE,
-                "Use httpResource for GET requests (signal-based reactive fetching)")
-                .defaultValue("true"));
         cliOptions.add(new CliOption(USE_INJECT_FUNCTION,
                 "Use inject() function instead of constructor injection")
                 .defaultValue("true"));
@@ -117,7 +110,7 @@ public class Angular21Generator extends TypeScriptAngularClientCodegen {
     @Override
     public String getHelp() {
         return "Generates Angular 21 client code with modern best practices including " +
-                "httpResource for GET requests, inject() function, and signal-based reactivity.";
+                "httpResource for selected GET requests, inject() function, and signal-based reactivity.";
     }
 
     @Override
@@ -129,11 +122,6 @@ public class Angular21Generator extends TypeScriptAngularClientCodegen {
         supportingFiles.add(new SupportingFile("configuration.mustache", "", "configuration.ts"));
 
         // Process custom options
-        if (additionalProperties.containsKey(USE_HTTP_RESOURCE)) {
-            useHttpResource = Boolean.parseBoolean(additionalProperties.get(USE_HTTP_RESOURCE).toString());
-        }
-        additionalProperties.put(USE_HTTP_RESOURCE, useHttpResource);
-
         if (additionalProperties.containsKey(USE_INJECT_FUNCTION)) {
             useInjectFunction = Boolean.parseBoolean(additionalProperties.get(USE_INJECT_FUNCTION).toString());
         }
@@ -161,9 +149,9 @@ public class Angular21Generator extends TypeScriptAngularClientCodegen {
 
         // Update supporting files
 
-        LOGGER.info("Angular21 Generator initialized with: useHttpResource={}, useInjectFunction={}, " +
+        LOGGER.info("Angular21 Generator initialized with: useInjectFunction={}, " +
                 "separateResources={}, readonlyModels={}, httpResourceOperations={}, legacyNaming={}",
-                useHttpResource, useInjectFunction, separateResources, readonlyModels, httpResourceOperations, legacyNaming);
+                useInjectFunction, separateResources, readonlyModels, httpResourceOperations, legacyNaming);
     }
 
     @Override
@@ -309,9 +297,6 @@ public class Angular21Generator extends TypeScriptAngularClientCodegen {
     }
 
     private boolean shouldGenerateHttpResource(CodegenOperation operation) {
-        if (!useHttpResource) {
-            return false;
-        }
         Object extensionValue = operation.vendorExtensions.get(HTTP_RESOURCE_VENDOR_EXTENSION);
         if (extensionValue != null) {
             return Boolean.parseBoolean(extensionValue.toString());
@@ -356,6 +341,10 @@ public class Angular21Generator extends TypeScriptAngularClientCodegen {
             boolean allOptional = true;
             for (CodegenParameter param : op.queryParams) {
                 param.vendorExtensions.put("x-ts-name", toCamelCase(param.paramName));
+                if (param.isArray) {
+                    param.vendorExtensions.put("x-query-array-exploded", isExplodedQueryArray(param));
+                    param.vendorExtensions.put("x-query-array-delimiter", queryArrayDelimiter(param));
+                }
                 if (param.required) {
                     allOptional = false;
                 }
@@ -402,6 +391,23 @@ public class Angular21Generator extends TypeScriptAngularClientCodegen {
             return true;
         }
         return false;
+    }
+
+    private boolean isExplodedQueryArray(CodegenParameter param) {
+        return param.isExplode || param.isCollectionFormatMulti;
+    }
+
+    private String queryArrayDelimiter(CodegenParameter param) {
+        if (param.isPipeDelimited || "pipes".equals(param.collectionFormat)) {
+            return "|";
+        }
+        if (param.isSpaceDelimited || "ssv".equals(param.collectionFormat)) {
+            return " ";
+        }
+        if ("tsv".equals(param.collectionFormat)) {
+            return "\\t";
+        }
+        return ",";
     }
 
     /**

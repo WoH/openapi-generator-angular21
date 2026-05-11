@@ -61,14 +61,21 @@ export class {{classname}} {
 {{#hasQueryParams}}
         const queryParams = new URLSearchParams();
 {{#queryParams}}
-        if ({{paramName}} !== undefined && {{paramName}} !== null) {
 {{#isArray}}
+        if ({{paramName}}?.length) {
+{{#vendorExtensions.x-query-array-exploded}}
             {{paramName}}.forEach(item => queryParams.append('{{baseName}}', String(item)));
+{{/vendorExtensions.x-query-array-exploded}}
+{{^vendorExtensions.x-query-array-exploded}}
+            queryParams.set('{{baseName}}', {{paramName}}.map(item => String(item)).join('{{vendorExtensions.x-query-array-delimiter}}'));
+{{/vendorExtensions.x-query-array-exploded}}
+        }
 {{/isArray}}
 {{^isArray}}
+        if ({{paramName}} !== undefined && {{paramName}} !== null) {
             queryParams.set('{{baseName}}', String({{paramName}}));
-{{/isArray}}
         }
+{{/isArray}}
 {{/queryParams}}
         const queryString = queryParams.toString();
         const url = `${this.basePath}{{{vendorExtensions.xPathTemplate}}}${queryString ? `?${queryString}` : ''}`;
@@ -147,7 +154,12 @@ export class {{classname}} {
 {{#queryParams}}
 {{#isArray}}
             if (queryParams.{{vendorExtensions.x-ts-name}}?.length) {
+{{#vendorExtensions.x-query-array-exploded}}
                 queryParams.{{vendorExtensions.x-ts-name}}.forEach(value => searchParams.append('{{baseName}}', String(value)));
+{{/vendorExtensions.x-query-array-exploded}}
+{{^vendorExtensions.x-query-array-exploded}}
+                searchParams.set('{{baseName}}', queryParams.{{vendorExtensions.x-ts-name}}.map(value => String(value)).join('{{vendorExtensions.x-query-array-delimiter}}'));
+{{/vendorExtensions.x-query-array-exploded}}
             }
 {{/isArray}}
 {{^isArray}}
