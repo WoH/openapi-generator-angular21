@@ -6,14 +6,11 @@
 import { HttpClient, HttpEvent, HttpResponse{{#hasResourceOperations}}, httpResource, HttpResourceRef{{/hasResourceOperations}}{{#operations.operation}}{{#hasFormParams}}, HttpHeaders{{/hasFormParams}}{{/operations.operation}} } from '@angular/common/http';
 import { inject, Injectable{{#hasResourceOperations}}, Signal{{/hasResourceOperations}} } from '@angular/core';
 import { Observable } from 'rxjs';
-import { Configuration } from '../configuration';
 {{#imports}}
 import { {{classname}} } from '{{filename}}';
 {{/imports}}
 
-{{#hasResourceOperations}}
 const BASE_PATH = '{{contextPath}}';
-{{/hasResourceOperations}}
 
 {{#operations}}
 {{#operation}}
@@ -36,8 +33,6 @@ export interface {{vendorExtensions.x-params-interface-name}} {
 @Injectable({ providedIn: 'root' })
 export class {{classname}} {
     private readonly http = inject(HttpClient);
-    private readonly configuration = inject(Configuration, { optional: true });
-    private readonly basePath = this.configuration?.basePath ?? '{{contextPath}}';
 
 {{#operations}}
 {{#operation}}
@@ -78,10 +73,10 @@ export class {{classname}} {
 {{/isArray}}
 {{/queryParams}}
         const queryString = queryParams.toString();
-        const url = `${this.basePath}{{{vendorExtensions.xPathTemplate}}}${queryString ? `?${queryString}` : ''}`;
+        const url = `${BASE_PATH}{{{vendorExtensions.xPathTemplate}}}${queryString ? `?${queryString}` : ''}`;
 {{/hasQueryParams}}
 {{^hasQueryParams}}
-        const url = `${this.basePath}{{{vendorExtensions.xPathTemplate}}}`;
+        const url = `${BASE_PATH}{{{vendorExtensions.xPathTemplate}}}`;
 {{/hasQueryParams}}
 {{#hasFormParams}}
         const formData = new FormData();

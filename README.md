@@ -63,23 +63,24 @@ export interface CourseUpdate {
 
 ### API Service (Mutations)
 ```typescript
+const BASE_PATH = '/api';
+
 @Injectable({ providedIn: 'root' })
 export class CourseApi {
     private readonly http = inject(HttpClient);
-    private readonly basePath = '/api';
 
     createCourse(courseCreate: CourseCreate): Observable<Course> {
-        const url = `${this.basePath}/courses`;
+        const url = `${BASE_PATH}/courses`;
         return this.http.post<Course>(url, courseCreate);
     }
 
     deleteCourse(courseId: number): Observable<void> {
-        const url = `${this.basePath}/courses/$${courseId}`;
+        const url = `${BASE_PATH}/courses/$${courseId}`;
         return this.http.delete(url);
     }
 
     updateCourse(courseId: number, courseUpdate: CourseUpdate): Observable<Course> {
-        const url = `${this.basePath}/courses/$${courseId}`;
+        const url = `${BASE_PATH}/courses/$${courseId}`;
         return this.http.put<Course>(url, courseUpdate);
     }
 }

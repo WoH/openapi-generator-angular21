@@ -29,9 +29,11 @@ class Angular21GeneratorTest {
         assertTrue(Files.exists(freePeriodApi));
         assertFalse(Files.exists(tempDir.resolve("api/tutorialGroupResources.service.ts")));
         assertFalse(Files.exists(tempDir.resolve("api/tutorialGroupFreePeriodResources.service.ts")));
+        assertFalse(Files.exists(tempDir.resolve("configuration.ts")));
 
         String api = Files.readString(tutorialGroupApi);
-        assertContains(api, "import { Configuration } from '../configuration';");
+        assertFalse(api.contains("from '../configuration'"));
+        assertFalse(api.contains("inject(Configuration"));
         assertContains(api, "import { HttpClient, HttpEvent, HttpResponse, httpResource, HttpResourceRef } from '@angular/common/http';");
         assertContains(api, "import { inject, Injectable, Signal } from '@angular/core';");
         assertContains(api, "import { CreateOrUpdateTutorialGroupRequest } from '../model/createOrUpdateTutorialGroupRequest';");
@@ -42,6 +44,8 @@ class Angular21GeneratorTest {
         assertContains(api, "getTutorialGroupsResource(courseId: Signal<number> | number, params?: Signal<GetTutorialGroupsParams>): HttpResourceRef<Array<TutorialGroupDetailData> | undefined>");
         assertContains(api, "getTutorialGroups(courseId: number, registered?: boolean, campus?: Array<string>, observe?: 'body', reportProgress?: boolean): Observable<Array<TutorialGroupDetailData>>;");
         assertContains(api, "searchParams.append('campus', String(value))");
+        assertContains(api, "const BASE_PATH = '/api';");
+        assertContains(api, "const url = `${BASE_PATH}/tutorialgroup/courses/${courseId}/tutorial-groups${queryString ? `?${queryString}` : ''}`;");
         assertContains(api, "return `${BASE_PATH}/tutorialgroup/courses/${courseIdValue}/tutorial-groups${query ? `?${query}` : ''}`;");
         assertContains(api, "getTutorialGroup(courseId: number, tutorialGroupId: number, observe?: 'response', reportProgress?: boolean): Observable<HttpResponse<TutorialGroupDetailData>>;");
         assertContains(api, "return this.http.get<TutorialGroupDetailData>(url, { observe, reportProgress });");

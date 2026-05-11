@@ -119,7 +119,6 @@ public class Angular21Generator extends TypeScriptAngularClientCodegen {
 
         // Replace base generator supporting files with the small set this template uses.
         supportingFiles.clear();
-        supportingFiles.add(new SupportingFile("configuration.mustache", "", "configuration.ts"));
 
         // Process custom options
         if (additionalProperties.containsKey(USE_INJECT_FUNCTION)) {
@@ -356,7 +355,7 @@ public class Angular21Generator extends TypeScriptAngularClientCodegen {
     }
 
     /**
-     * Build a URL path template that encodes path params without using Configuration.
+     * Build a URL path template that encodes path params.
      */
     private String buildPathTemplate(CodegenOperation op, String originalPath, boolean useSignalValue) {
         if (originalPath == null) {
