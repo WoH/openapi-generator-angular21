@@ -37,10 +37,13 @@ export interface {{vendorExtensions.x-params-interface-name}} {
  * @param params Optional signal containing query parameters
 {{/vendorExtensions.x-has-query-params}}
  */
-export function {{nickname}}Resource({{#pathParams}}{{vendorExtensions.x-ts-name}}: Signal<{{{dataType}}}> | {{{dataType}}}{{^-last}}, {{/-last}}{{/pathParams}}{{#vendorExtensions.x-has-query-params}}{{#hasPathParams}}, {{/hasPathParams}}{{#vendorExtensions.x-all-query-params-optional}}params?: Signal<{{vendorExtensions.x-params-interface-name}}>{{/vendorExtensions.x-all-query-params-optional}}{{^vendorExtensions.x-all-query-params-optional}}params: Signal<{{vendorExtensions.x-params-interface-name}}>{{/vendorExtensions.x-all-query-params-optional}}{{/vendorExtensions.x-has-query-params}}): HttpResourceRef<{{#returnType}}{{{.}}}{{/returnType}}{{^returnType}}unknown{{/returnType}} | undefined> {
+export function {{nickname}}Resource({{#pathParams}}{{vendorExtensions.x-ts-name}}: Signal<{{{dataType}}} | undefined> | {{{dataType}}}{{^-last}}, {{/-last}}{{/pathParams}}{{#vendorExtensions.x-has-query-params}}{{#hasPathParams}}, {{/hasPathParams}}{{#vendorExtensions.x-all-query-params-optional}}params?: Signal<{{vendorExtensions.x-params-interface-name}}>{{/vendorExtensions.x-all-query-params-optional}}{{^vendorExtensions.x-all-query-params-optional}}params: Signal<{{vendorExtensions.x-params-interface-name}}>{{/vendorExtensions.x-all-query-params-optional}}{{/vendorExtensions.x-has-query-params}}): HttpResourceRef<{{#returnType}}{{{.}}}{{/returnType}}{{^returnType}}unknown{{/returnType}} | undefined> {
     return httpResource{{#vendorExtensions.x-response-type}}.{{vendorExtensions.x-response-type}}{{/vendorExtensions.x-response-type}}{{^vendorExtensions.x-response-type}}<{{#returnType}}{{{.}}}{{/returnType}}{{^returnType}}unknown{{/returnType}}>{{/vendorExtensions.x-response-type}}(() => {
 {{#pathParams}}
         const {{vendorExtensions.x-ts-name}}Value = typeof {{vendorExtensions.x-ts-name}} === 'function' ? {{vendorExtensions.x-ts-name}}() : {{vendorExtensions.x-ts-name}};
+        if ({{vendorExtensions.x-ts-name}}Value === undefined) {
+            return undefined;
+        }
 {{^vendorExtensions.x-is-numeric}}
         const {{vendorExtensions.x-ts-name}}Path = encodeURIComponent(String({{vendorExtensions.x-ts-name}}Value));
 {{/vendorExtensions.x-is-numeric}}

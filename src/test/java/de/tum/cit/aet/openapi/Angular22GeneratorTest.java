@@ -35,11 +35,13 @@ class Angular22GeneratorTest {
         assertContains(api, "return this.http.get(url, { responseType: 'text' });");
 
         String resources = Files.readString(tempDir.resolve("api/tutorial-group-resources.ts"));
-        assertContains(resources, "export function getTutorialGroupsResource(courseId: Signal<number> | number, params?: Signal<GetTutorialGroupsParams>): HttpResourceRef<Array<TutorialGroupDetailData> | undefined>");
+        assertContains(resources, "export function getTutorialGroupsResource(courseId: Signal<number | undefined> | number, params?: Signal<GetTutorialGroupsParams>): HttpResourceRef<Array<TutorialGroupDetailData> | undefined>");
         assertContains(resources, "return `${BASE_PATH}/tutorialgroup/courses/${courseIdValue}/tutorial-groups${query ? `?${query}` : ''}`;");
-        assertContains(resources, "export function searchTutorialGroupsResource(courseId: Signal<number> | number, params: Signal<SearchTutorialGroupsParams>)");
+        // An id that is not known yet (for example before the route resolved) skips the request instead of calling .../undefined.
+        assertContains(resources, "if (courseIdValue === undefined) {\n            return undefined;\n        }");
+        assertContains(resources, "export function searchTutorialGroupsResource(courseId: Signal<number | undefined> | number, params: Signal<SearchTutorialGroupsParams>)");
         // Non-JSON GETs must not go through the JSON parser.
-        assertContains(resources, "getTutorialGroupAvatarResource(courseId: Signal<number> | number, tutorialGroupId: Signal<number> | number): HttpResourceRef<Blob | undefined>");
+        assertContains(resources, "getTutorialGroupAvatarResource(courseId: Signal<number | undefined> | number, tutorialGroupId: Signal<number | undefined> | number): HttpResourceRef<Blob | undefined>");
         assertContains(resources, "return httpResource.blob(() => {");
         assertContains(resources, "return httpResource.text(() => {");
         assertFalse(resources.contains("httpResource<Blob>"));
