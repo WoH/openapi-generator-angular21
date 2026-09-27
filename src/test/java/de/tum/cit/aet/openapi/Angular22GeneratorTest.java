@@ -199,6 +199,26 @@ class Angular22GeneratorTest {
         assertContains(resources, "return { url: `${BASE_PATH}/api/search/${queryParamPath}/${paramsParamValue}${query ? `?${query}` : ''}`, headers };");
     }
 
+    @Test
+    void namesModelPropertiesExactlyLikeTheirJsonKeys() throws IOException {
+        generateFixture("fixtures/reserved-property-openapi.yaml", Map.of());
+
+        // Interfaces describe the JSON as it is, so a property name must be its JSON key. Reserved words are valid
+        // property names; keys that are not identifiers are quoted.
+        assertContains(Files.readString(tempDir.resolve("model/result-summary.ts")), """
+                export interface ResultSummary {
+                    readonly final?: boolean;
+                    readonly delete: boolean;
+                    readonly class?: string;
+                    readonly 'x-y'?: string;
+                    readonly first_name?: string;
+                    readonly score?: number;
+                }
+                """);
+        // Parameters are identifiers, so reserved words stay escaped there.
+        assertContains(Files.readString(tempDir.resolve("api/result-api.ts")), "getResults(_final?: boolean): Observable<Array<ResultSummary>>");
+    }
+
     private void generateFixture(String fixture, Map<String, Object> additionalProperties) {
         CodegenConfigurator configurator = new CodegenConfigurator()
                 .setGeneratorName(Angular22Generator.GENERATOR_NAME)
