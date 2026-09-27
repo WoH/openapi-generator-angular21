@@ -57,6 +57,9 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Angular22Generator.class);
 
+    /** TypeScript types that {@code String()} turns into a form field value without losing information. */
+    private static final Set<String> TS_SCALAR_TYPES = Set.of("string", "number", "boolean");
+
     /** Generator name used by the OpenAPI Generator SPI and CLI. */
     public static final String GENERATOR_NAME = "angular22";
     /** Config option for enabling httpResource-based GET resources. */
@@ -418,6 +421,7 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
             // Step 3 & 4: Process parameters
             processPathParameters(op);
             processQueryParameters(op);
+            processFormParameters(op);
 
             // Step 5: Build TypeScript template literal URLs
             String originalPath = originalPaths.getOrDefault(op.operationId, op.path);
@@ -509,6 +513,42 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
         } else {
             op.vendorExtensions.put("x-has-query-params", false);
         }
+    }
+
+    /**
+     * Computes the {@code FormData.append} statement for each multipart field and stores it in the
+     * {@code x-form-append} vendor extension.
+     *
+     * <p>{@code FormData} only accepts strings and Blobs. Binary fields are appended as they are (an array of
+     * binaries as one part per item), scalars and enums are converted with {@code String()}, and everything
+     * else (objects, arrays of objects, maps) goes out as a single {@code application/json} part, which is
+     * what Spring's {@code @RequestPart} expects for a DTO.</p>
+     *
+     * @param op the operation whose form parameters should be processed
+     */
+    private void processFormParameters(CodegenOperation op) {
+        if (op.formParams == null) {
+            return;
+        }
+        for (CodegenParameter param : op.formParams) {
+            String name = param.paramName;
+            String key = "'" + param.baseName + "'";
+            String statement;
+            if (isBinaryType(param.dataType)) {
+                statement = "formData.append(" + key + ", " + name + ");";
+            } else if (param.isArray && isBinaryType(param.items != null ? param.items.dataType : null)) {
+                statement = name + ".forEach(item => formData.append(" + key + ", item));";
+            } else if (param.isEnum || param.isEnumRef || TS_SCALAR_TYPES.contains(param.dataType)) {
+                statement = "formData.append(" + key + ", String(" + name + "));";
+            } else {
+                statement = "formData.append(" + key + ", new Blob([JSON.stringify(" + name + ")], { type: 'application/json' }));";
+            }
+            param.vendorExtensions.put("x-form-append", statement);
+        }
+    }
+
+    private static boolean isBinaryType(String dataType) {
+        return "Blob".equals(dataType) || "File".equals(dataType);
     }
 
     // =============================================================================================

@@ -59,12 +59,7 @@ export class {{classname}} {
         const formData = new FormData();
 {{#formParams}}
         if ({{paramName}} !== undefined && {{paramName}} !== null) {
-{{#isArray}}
-            {{paramName}}.forEach(item => formData.append('{{baseName}}', item));
-{{/isArray}}
-{{^isArray}}
-            formData.append('{{baseName}}', {{paramName}});
-{{/isArray}}
+            {{{vendorExtensions.x-form-append}}}
         }
 {{/formParams}}
 {{#isResponseFile}}
