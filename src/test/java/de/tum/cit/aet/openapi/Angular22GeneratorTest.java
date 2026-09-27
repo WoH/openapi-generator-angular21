@@ -66,6 +66,14 @@ class Angular22GeneratorTest {
         assertFalse(api.contains("httpResource"));
     }
 
+    @Test
+    void generatesApisWhoseClassNameIsShorterThanTheServiceSuffix() throws IOException {
+        // FaqApi has fewer characters than the parent generator's default service suffix "Service".
+        generateFixture("fixtures/short-tag-openapi.yaml", Map.of());
+
+        assertContains(Files.readString(tempDir.resolve("api/faq-api.ts")), "export class FaqApi");
+    }
+
     private void generateFixture(String fixture, Map<String, Object> additionalProperties) {
         CodegenConfigurator configurator = new CodegenConfigurator()
                 .setGeneratorName(Angular22Generator.GENERATOR_NAME)
