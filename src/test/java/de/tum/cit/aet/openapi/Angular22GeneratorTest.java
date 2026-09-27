@@ -1,5 +1,6 @@
 package de.tum.cit.aet.openapi;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -247,6 +248,66 @@ class Angular22GeneratorTest {
                 """);
     }
 
+    @Test
+    void expandsObjectQueryParametersIntoOneKeyPerProperty() throws IOException {
+        generateFixture("fixtures/object-query-openapi.yaml", Map.of());
+
+        // String(search) sends search=[object Object]. OpenAPI's default form/explode style sends one key per
+        // property, which is what Spring binds to a DTO.
+        String api = Files.readString(tempDir.resolve("api/score-api.ts"));
+        assertContains(api, """
+                        if (search !== undefined && search !== null) {
+                            appendQueryObject(queryParams, search);
+                        }
+                """);
+        assertContains(api, "queryParams.set('includeTeams', String(includeTeams));");
+        assertContains(api, """
+                /**
+                 * Appends an object query parameter as OpenAPI form/explode and Spring's data binding expect it: one key per
+                 * property, arrays as repeated keys, nested objects as dotted keys.
+                 */
+                function appendQueryObject(target: URLSearchParams, value: object, prefix?: string): void {
+                    for (const [key, entry] of Object.entries(value)) {
+                        const name = prefix ? `${prefix}.${key}` : key;
+                        if (entry === undefined || entry === null) {
+                            continue;
+                        }
+                        if (Array.isArray(entry)) {
+                            entry.forEach((item) => target.append(name, String(item)));
+                        } else if (typeof entry === 'object') {
+                            appendQueryObject(target, entry, name);
+                        } else {
+                            target.append(name, String(entry));
+                        }
+                    }
+                }
+                """);
+        assertEquals(1, countOccurrences(api, "function appendQueryObject("));
+
+        String resources = Files.readString(tempDir.resolve("api/score-resources.ts"));
+        assertContains(resources, """
+                        if (queryParams.search !== undefined && queryParams.search !== null) {
+                            appendQueryObject(searchParams, queryParams.search);
+                        }
+                """);
+        assertEquals(1, countOccurrences(resources, "function appendQueryObject("));
+
+        // An unused helper would fail noUnusedLocals, so a tag without object query parameters does not declare it.
+        assertFalse(Files.readString(tempDir.resolve("api/course-api.ts")).contains("appendQueryObject"));
+        assertFalse(Files.readString(tempDir.resolve("api/course-resources.ts")).contains("appendQueryObject"));
+    }
+
+    @Test
+    void declaresTheQueryObjectHelperOnceNextToInlineResources() throws IOException {
+        generateFixture("fixtures/object-query-openapi.yaml", Map.of("separateResources", "false"));
+
+        String api = Files.readString(tempDir.resolve("api/score-api.ts"));
+        assertContains(api, "appendQueryObject(queryParams, search);");
+        assertContains(api, "appendQueryObject(searchParams, queryParams.search);");
+        assertEquals(1, countOccurrences(api, "function appendQueryObject("));
+        assertFalse(Files.readString(tempDir.resolve("api/course-api.ts")).contains("appendQueryObject"));
+    }
+
     private void generateFixture(String fixture, Map<String, Object> additionalProperties) {
         CodegenConfigurator configurator = new CodegenConfigurator()
                 .setGeneratorName(Angular22Generator.GENERATOR_NAME)
@@ -258,5 +319,16 @@ class Angular22GeneratorTest {
 
     private static void assertContains(String actual, String expected) {
         assertTrue(actual.contains(expected), () -> "Expected generated output to contain:\n" + expected + "\n\nActual output:\n" + actual);
+    }
+
+    /**
+     * Counts the non-overlapping occurrences of {@code needle} in {@code text}.
+     */
+    private static int countOccurrences(String text, String needle) {
+        int count = 0;
+        for (int index = text.indexOf(needle); index >= 0; index = text.indexOf(needle, index + needle.length())) {
+            count++;
+        }
+        return count;
     }
 }
