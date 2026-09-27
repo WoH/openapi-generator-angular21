@@ -167,6 +167,38 @@ class Angular22GeneratorTest {
         assertContains(resources, "return `${BASE_PATH}/api/exercises/${exerciseIdValue}`;");
     }
 
+    @Test
+    void renamesParametersThatCollideWithTemplateLocals() throws IOException {
+        generateFixture("fixtures/local-name-collision-openapi.yaml", Map.of());
+
+        String api = Files.readString(tempDir.resolve("api/link-api.ts"));
+        // The TypeScript name changes, the wire name stays.
+        assertContains(api, """
+                    getLinkPreview(urlParam: string): Observable<LinkPreview> {
+                        const queryParams = new URLSearchParams();
+                        if (urlParam !== undefined && urlParam !== null) {
+                            queryParams.set('url', String(urlParam));
+                        }
+                        const queryString = queryParams.toString();
+                        const url = `${this.basePath}/api/link-preview${queryString ? `?${queryString}` : ''}`;
+                """);
+        assertContains(api, "search(queryParam: string, paramsParam: number, headersParam?: string, queryStringParam?: string, queryParamsParam?: string): Observable<Array<LinkPreview>>");
+        assertContains(api, "const queryParamPath = encodeURIComponent(String(queryParam));");
+        assertContains(api, "queryParams.set('queryString', String(queryStringParam));");
+        assertContains(api, "queryParams.set('queryParams', String(queryParamsParam));");
+        assertContains(api, "const url = `${this.basePath}/api/search/${queryParamPath}/${paramsParam}${queryString ? `?${queryString}` : ''}`;");
+        assertContains(api, "headers['headers'] = String(headersParam);");
+        assertContains(api, "upload(formDataParam?: string): Observable<void>");
+        assertContains(api, "formData.append('formData', String(formDataParam));");
+
+        String resources = Files.readString(tempDir.resolve("api/link-resources.ts"));
+        assertContains(resources, "searchParams.set('url', String(queryParams.urlParam));");
+        assertContains(resources, "export function searchResource(queryParam: Signal<string | undefined> | string, paramsParam: Signal<number | undefined> | number, headersParam?: Signal<string | undefined> | string, params?: Signal<SearchParams>)");
+        assertContains(resources, "const queryParamValue = typeof queryParam === 'function' ? queryParam() : queryParam;");
+        assertContains(resources, "const headersParamValue = typeof headersParam === 'function' ? headersParam() : headersParam;");
+        assertContains(resources, "return { url: `${BASE_PATH}/api/search/${queryParamPath}/${paramsParamValue}${query ? `?${query}` : ''}`, headers };");
+    }
+
     private void generateFixture(String fixture, Map<String, Object> additionalProperties) {
         CodegenConfigurator configurator = new CodegenConfigurator()
                 .setGeneratorName(Angular22Generator.GENERATOR_NAME)
