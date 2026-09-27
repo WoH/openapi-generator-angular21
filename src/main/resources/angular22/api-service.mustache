@@ -55,6 +55,14 @@ export class {{classname}} {
 {{^hasQueryParams}}
         const url = `${this.basePath}{{{vendorExtensions.xPathTemplate}}}`;
 {{/hasQueryParams}}
+{{#hasHeaderParams}}
+        const headers: Record<string, string> = {};
+{{#headerParams}}
+        if ({{paramName}} !== undefined && {{paramName}} !== null) {
+            headers['{{baseName}}'] = String({{paramName}});
+        }
+{{/headerParams}}
+{{/hasHeaderParams}}
 {{#hasFormParams}}
         const formData = new FormData();
 {{#formParams}}
@@ -95,11 +103,14 @@ export interface {{vendorExtensions.x-params-interface-name}} {
 {{#pathParams}}
  * @param {{vendorExtensions.x-ts-name}} {{description}}
 {{/pathParams}}
+{{#headerParams}}
+ * @param {{vendorExtensions.x-ts-name}} {{description}}
+{{/headerParams}}
 {{#vendorExtensions.x-has-query-params}}
  * @param params Optional signal containing query parameters
 {{/vendorExtensions.x-has-query-params}}
  */
-export function {{nickname}}Resource({{#pathParams}}{{vendorExtensions.x-ts-name}}: Signal<{{{dataType}}} | undefined> | {{{dataType}}}{{^-last}}, {{/-last}}{{/pathParams}}{{#vendorExtensions.x-has-query-params}}{{#hasPathParams}}, {{/hasPathParams}}{{#vendorExtensions.x-all-query-params-optional}}params?: Signal<{{vendorExtensions.x-params-interface-name}}>{{/vendorExtensions.x-all-query-params-optional}}{{^vendorExtensions.x-all-query-params-optional}}params: Signal<{{vendorExtensions.x-params-interface-name}}>{{/vendorExtensions.x-all-query-params-optional}}{{/vendorExtensions.x-has-query-params}}): HttpResourceRef<{{#returnType}}{{{.}}}{{/returnType}}{{^returnType}}unknown{{/returnType}} | undefined> {
+export function {{nickname}}Resource({{{vendorExtensions.x-resource-params}}}): HttpResourceRef<{{#returnType}}{{{.}}}{{/returnType}}{{^returnType}}unknown{{/returnType}} | undefined> {
     return httpResource{{#vendorExtensions.x-response-type}}.{{vendorExtensions.x-response-type}}{{/vendorExtensions.x-response-type}}{{^vendorExtensions.x-response-type}}<{{#returnType}}{{{.}}}{{/returnType}}{{^returnType}}unknown{{/returnType}}>{{/vendorExtensions.x-response-type}}(() => {
 {{#pathParams}}
         const {{vendorExtensions.x-ts-name}}Value = typeof {{vendorExtensions.x-ts-name}} === 'function' ? {{vendorExtensions.x-ts-name}}() : {{vendorExtensions.x-ts-name}};
@@ -110,6 +121,15 @@ export function {{nickname}}Resource({{#pathParams}}{{vendorExtensions.x-ts-name
         const {{vendorExtensions.x-ts-name}}Path = encodeURIComponent(String({{vendorExtensions.x-ts-name}}Value));
 {{/vendorExtensions.x-is-numeric}}
 {{/pathParams}}
+{{#hasHeaderParams}}
+        const headers: Record<string, string> = {};
+{{#headerParams}}
+        const {{vendorExtensions.x-ts-name}}Value = typeof {{vendorExtensions.x-ts-name}} === 'function' ? {{vendorExtensions.x-ts-name}}() : {{vendorExtensions.x-ts-name}};
+        if ({{vendorExtensions.x-ts-name}}Value !== undefined && {{vendorExtensions.x-ts-name}}Value !== null) {
+            headers['{{baseName}}'] = String({{vendorExtensions.x-ts-name}}Value);
+        }
+{{/headerParams}}
+{{/hasHeaderParams}}
 {{#vendorExtensions.x-has-query-params}}
 {{#vendorExtensions.x-all-query-params-optional}}
         const queryParams = params?.() ?? {};
@@ -138,11 +158,8 @@ export function {{nickname}}Resource({{#pathParams}}{{vendorExtensions.x-ts-name
 {{/isArray}}
 {{/queryParams}}
         const query = searchParams.toString();
-        return `${BASE_PATH}{{{vendorExtensions.xResourcePathTemplate}}}${query ? `?${query}` : ''}`;
 {{/vendorExtensions.x-has-query-params}}
-{{^vendorExtensions.x-has-query-params}}
-        return `${BASE_PATH}{{{vendorExtensions.xResourcePathTemplate}}}`;
-{{/vendorExtensions.x-has-query-params}}
+        return {{{vendorExtensions.x-resource-request}}};
     });
 }
 

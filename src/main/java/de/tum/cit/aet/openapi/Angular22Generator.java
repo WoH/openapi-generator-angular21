@@ -419,6 +419,7 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
             // Step 3 & 4: Process parameters
             processPathParameters(op);
             processQueryParameters(op);
+            processHeaderParameters(op);
             processFormParameters(op);
             buildHttpCall(op);
 
@@ -430,6 +431,9 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
             op.vendorExtensions.put("xResourcePathTemplate", resourcePathTemplate);
             if (pathTemplate != null && !pathTemplate.isBlank()) {
                 op.path = pathTemplate;
+            }
+            if (isGet) {
+                buildResourceFunction(op, resourcePathTemplate);
             }
         }
 
@@ -524,7 +528,7 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
      *       option selects a non-JSON overload that already fixes the result type</li>
      *   <li>{@code x-http-args} &mdash; the argument list: {@code url}, the payload for methods that take one,
      *       and an options object with, in this order and only when present, {@code body} (DELETE only),
-     *       {@code responseType} and {@code observe}</li>
+     *       {@code headers}, {@code responseType} and {@code observe}</li>
      * </ul>
      *
      * @param op the operation whose HttpClient call should be built
@@ -550,6 +554,9 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
         } else if (op.isBodyAllowed()) {
             args.add("null");
         }
+        if (op.getHasHeaderParams()) {
+            options.add("headers");
+        }
 
         Object responseType = op.vendorExtensions.get("x-response-type");
         if (op.isResponseFile) {
@@ -568,6 +575,75 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
         String typeArg = jsonResponse ? "<" + (op.returnType != null ? op.returnType : "void") + ">" : "";
         op.vendorExtensions.put("x-http-type-arg", typeArg);
         op.vendorExtensions.put("x-http-args", String.join(", ", args));
+    }
+
+    /**
+     * Processes header parameters for a single operation: sets the camelCase TypeScript variable name
+     * ({@code x-ts-name}) that the resource template uses for the header argument.
+     *
+     * @param op the operation whose header parameters should be processed
+     */
+    private void processHeaderParameters(CodegenOperation op) {
+        if (op.headerParams != null) {
+            for (CodegenParameter param : op.headerParams) {
+                param.vendorExtensions.put("x-ts-name", toCamelCase(param.paramName));
+            }
+        }
+    }
+
+    /**
+     * Builds the parameter list and the request expression of a GET operation's httpResource function.
+     *
+     * <p>Sets vendor extensions on the operation:</p>
+     * <ul>
+     *   <li>{@code x-resource-params} &mdash; path parameters, then header parameters (each a signal or a plain
+     *       value), then the query {@code params} signal. An argument is marked optional ({@code ?}) only when
+     *       every argument after it is optional too; an optional argument before a required one accepts
+     *       {@code undefined} instead.</li>
+     *   <li>{@code x-resource-request} &mdash; what the request function returns: the URL template literal, or
+     *       {@code { url: ..., headers }} when the operation declares header parameters</li>
+     * </ul>
+     *
+     * @param op                   the GET operation
+     * @param resourcePathTemplate the URL path with {@code ${...}} placeholders for the resource template
+     */
+    private void buildResourceFunction(CodegenOperation op, String resourcePathTemplate) {
+        List<ResourceArg> args = new ArrayList<>();
+        for (CodegenParameter param : op.pathParams) {
+            args.add(new ResourceArg(param.vendorExtensions.get("x-ts-name").toString(), signalOrValue(param.dataType), false));
+        }
+        for (CodegenParameter param : op.headerParams) {
+            args.add(new ResourceArg(param.vendorExtensions.get("x-ts-name").toString(), signalOrValue(param.dataType), !param.required));
+        }
+        boolean hasQueryParams = Boolean.TRUE.equals(op.vendorExtensions.get("x-has-query-params"));
+        if (hasQueryParams) {
+            args.add(new ResourceArg("params", "Signal<" + op.vendorExtensions.get("x-params-interface-name") + ">",
+                    Boolean.TRUE.equals(op.vendorExtensions.get("x-all-query-params-optional"))));
+        }
+
+        LinkedList<String> rendered = new LinkedList<>();
+        boolean trailingOptional = true;
+        for (int i = args.size() - 1; i >= 0; i--) {
+            ResourceArg arg = args.get(i);
+            trailingOptional = trailingOptional && arg.optional();
+            if (trailingOptional) {
+                rendered.addFirst(arg.name() + "?: " + arg.type());
+            } else {
+                rendered.addFirst(arg.name() + ": " + arg.type() + (arg.optional() ? " | undefined" : ""));
+            }
+        }
+        op.vendorExtensions.put("x-resource-params", String.join(", ", rendered));
+
+        String url = "`${BASE_PATH}" + resourcePathTemplate + (hasQueryParams ? "${query ? `?${query}` : ''}" : "") + "`";
+        op.vendorExtensions.put("x-resource-request", op.getHasHeaderParams() ? "{ url: " + url + ", headers }" : url);
+    }
+
+    /** One argument of a generated httpResource function. */
+    private record ResourceArg(String name, String type, boolean optional) {
+    }
+
+    private static String signalOrValue(String dataType) {
+        return "Signal<" + dataType + " | undefined> | " + dataType;
     }
 
     /**
