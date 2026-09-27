@@ -230,6 +230,23 @@ class Angular22GeneratorTest {
         assertFalse(Files.exists(tempDir.resolve("model/get-exam-200-response.ts")));
     }
 
+    @Test
+    void leavesPropertiesOfTheParentInterfaceToExtends() throws IOException {
+        generateFixture("fixtures/subtype-openapi.yaml", Map.of());
+
+        assertContains(Files.readString(tempDir.resolve("model/exercise.ts")), """
+                export interface Exercise {
+                    readonly type: string;
+                }
+                """);
+        // Redeclaring the required discriminator as optional would not compile (TS2430); extends already brings it.
+        assertContains(Files.readString(tempDir.resolve("model/text-exercise.ts")), """
+                export interface TextExercise extends Exercise {
+                    readonly name?: string;
+                }
+                """);
+    }
+
     private void generateFixture(String fixture, Map<String, Object> additionalProperties) {
         CodegenConfigurator configurator = new CodegenConfigurator()
                 .setGeneratorName(Angular22Generator.GENERATOR_NAME)
