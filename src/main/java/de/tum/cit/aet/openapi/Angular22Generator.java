@@ -781,14 +781,18 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
     // =============================================================================================
 
     /**
-     * Converts a model class name to a kebab-case filename.
+     * Converts a model name to a kebab-case filename derived from its class name.
      *
-     * @param name the PascalCase model name (e.g., {@code JobDetailDTO})
+     * <p>The generator calls this with the raw schema name when it writes a model file (e.g. the inline schema
+     * {@code getExam_200_response}) and with the class name when it writes an import ({@code GetExam200Response}).
+     * Going through {@link #toModelName(String)} first gives both the same file name.</p>
+     *
+     * @param name the schema or class name (e.g., {@code JobDetailDTO})
      * @return the kebab-case filename without extension (e.g., {@code job-detail-dto})
      */
     @Override
     public String toModelFilename(String name) {
-        return toKebabCase(name);
+        return toKebabCase(toModelName(name));
     }
 
     /**
