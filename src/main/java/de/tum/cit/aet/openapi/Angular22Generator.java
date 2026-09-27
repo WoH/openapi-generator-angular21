@@ -102,6 +102,9 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
         modelTemplateFiles.put("model.mustache", ".ts");
 
         apiNameSuffix = "Api";
+        // The parent strips serviceSuffix off every API class name to derive a file name, and fails on names shorter
+        // than its default "Service" (e.g. FaqApi). Keep it equal to the suffix toApiName appends.
+        serviceSuffix = apiNameSuffix;
         apiTemplateFiles.clear();
         apiTemplateFiles.put("api-service.mustache", "-api.ts");
 
