@@ -126,6 +126,47 @@ class Angular22GeneratorTest {
                 """);
     }
 
+    @Test
+    void sendsDeclaredHeaderParameters() throws IOException {
+        generateFixture("fixtures/header-params-openapi.yaml", Map.of());
+
+        String api = Files.readString(tempDir.resolve("api/repository-api.ts"));
+        assertContains(api, """
+                        const url = `${this.basePath}/api/exercises/${exerciseId}/repository${queryString ? `?${queryString}` : ''}`;
+                        const headers: Record<string, string> = {};
+                        if (authorization !== undefined && authorization !== null) {
+                            headers['Authorization'] = String(authorization);
+                        }
+                        if (xTraceId !== undefined && xTraceId !== null) {
+                            headers['X-Trace-Id'] = String(xTraceId);
+                        }
+                        return this.http.get<RepositoryFiles>(url, { headers });
+                """);
+        assertContains(api, "return this.http.post<void>(url, repositoryFeedback, { headers });");
+        assertContains(api, "return this.http.get(url, { headers, responseType: 'text' });");
+        assertContains(api, "return this.http.get<RepositoryFiles>(url);");
+
+        String resources = Files.readString(tempDir.resolve("api/repository-resources.ts"));
+        // Header values are function arguments like path parameters; an optional one stays optional only while
+        // every later argument is optional too.
+        assertContains(resources, "export function getRepositoryResource(exerciseId: Signal<number | undefined> | number, authorization: Signal<string | undefined> | string, xTraceId?: Signal<string | undefined> | string, params?: Signal<GetRepositoryParams>): HttpResourceRef<RepositoryFiles | undefined>");
+        assertContains(resources, """
+                        const headers: Record<string, string> = {};
+                        const authorizationValue = typeof authorization === 'function' ? authorization() : authorization;
+                        if (authorizationValue !== undefined && authorizationValue !== null) {
+                            headers['Authorization'] = String(authorizationValue);
+                        }
+                        const xTraceIdValue = typeof xTraceId === 'function' ? xTraceId() : xTraceId;
+                        if (xTraceIdValue !== undefined && xTraceIdValue !== null) {
+                            headers['X-Trace-Id'] = String(xTraceIdValue);
+                        }
+                """);
+        // With headers the resource returns the request object form, without them the plain URL string.
+        assertContains(resources, "return { url: `${BASE_PATH}/api/exercises/${exerciseIdValue}/repository${query ? `?${query}` : ''}`, headers };");
+        assertContains(resources, "return { url: `${BASE_PATH}/api/exercises/${exerciseIdValue}/repository/token`, headers };");
+        assertContains(resources, "return `${BASE_PATH}/api/exercises/${exerciseIdValue}`;");
+    }
+
     private void generateFixture(String fixture, Map<String, Object> additionalProperties) {
         CodegenConfigurator configurator = new CodegenConfigurator()
                 .setGeneratorName(Angular22Generator.GENERATOR_NAME)
