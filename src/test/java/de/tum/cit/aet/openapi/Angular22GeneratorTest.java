@@ -99,6 +99,16 @@ class Angular22GeneratorTest {
         assertContains(api, "return this.http.post<CourseCreate>(url, formData);");
     }
 
+    @Test
+    void passesDeleteRequestBodiesInTheOptionsObject() throws IOException {
+        generateFixture("fixtures/delete-body-openapi.yaml", Map.of());
+
+        String api = Files.readString(tempDir.resolve("api/user-api.ts"));
+        // HttpClient.delete takes (url, options); a body passed as the second argument selects the wrong overload.
+        assertContains(api, "return this.http.delete<void>(url, { body: bulkUserDeletionRequest });");
+        assertContains(api, "return this.http.delete<DeletionSummary>(url, { body: permanentUserDeletionRequest });");
+    }
+
     private void generateFixture(String fixture, Map<String, Object> additionalProperties) {
         CodegenConfigurator configurator = new CodegenConfigurator()
                 .setGeneratorName(Angular22Generator.GENERATOR_NAME)
