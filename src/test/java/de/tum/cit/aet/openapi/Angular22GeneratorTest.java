@@ -219,6 +219,17 @@ class Angular22GeneratorTest {
         assertContains(Files.readString(tempDir.resolve("api/result-api.ts")), "getResults(_final?: boolean): Observable<Array<ResultSummary>>");
     }
 
+    @Test
+    void writesInlineModelsToTheFileTheirImportsName() throws IOException {
+        generateFixture("fixtures/inline-model-openapi.yaml", Map.of());
+
+        // The inline response schema is named getExam_200_response; its class is GetExam200Response.
+        assertContains(Files.readString(tempDir.resolve("api/exam-api.ts")), "import { GetExam200Response } from '../model/get-exam200response';");
+        assertContains(Files.readString(tempDir.resolve("api/exam-resources.ts")), "import { GetExam200Response } from '../model/get-exam200response';");
+        assertContains(Files.readString(tempDir.resolve("model/get-exam200response.ts")), "export interface GetExam200Response {");
+        assertFalse(Files.exists(tempDir.resolve("model/get-exam-200-response.ts")));
+    }
+
     private void generateFixture(String fixture, Map<String, Object> additionalProperties) {
         CodegenConfigurator configurator = new CodegenConfigurator()
                 .setGeneratorName(Angular22Generator.GENERATOR_NAME)
