@@ -403,19 +403,17 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
                 mutationOperations.add(op);
             }
 
-            // Non-JSON GET responses need an explicit Angular HttpClient responseType. Without it the
-            // client defaults to responseType 'json' and tries to JSON.parse text/binary payloads
-            // (e.g. iCalendar files, CSV exports, plain-text tokens), which throws at runtime. A binary
-            // (Blob) return becomes responseType 'blob'; a string return whose produced media types are
-            // all text/* becomes responseType 'text'. JSON-string endpoints keep the default parser.
-            // File-download GETs (isResponseFile) are handled separately in the template with
+            // Non-JSON responses need an explicit Angular HttpClient responseType, for every HTTP method.
+            // Without it the client defaults to responseType 'json' and tries to JSON.parse text/binary
+            // payloads (e.g. iCalendar files, CSV exports, plain-text tokens, generated source code), which
+            // throws at runtime. A binary (Blob) return becomes responseType 'blob'; a string return whose
+            // produced media types are all text/* becomes responseType 'text'. JSON-string endpoints keep
+            // the default parser. File downloads (isResponseFile) are handled in buildHttpCall with
             // observe: 'response' so callers get the HttpResponse headers.
-            if (isGet) {
-                if ("Blob".equals(op.returnType)) {
-                    op.vendorExtensions.put("x-response-type", "blob");
-                } else if ("string".equals(op.returnType) && producesTextOnly(op)) {
-                    op.vendorExtensions.put("x-response-type", "text");
-                }
+            if ("Blob".equals(op.returnType)) {
+                op.vendorExtensions.put("x-response-type", "blob");
+            } else if ("string".equals(op.returnType) && producesTextOnly(op)) {
+                op.vendorExtensions.put("x-response-type", "text");
             }
 
             // Step 3 & 4: Process parameters
@@ -734,7 +732,7 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
 
     /**
      * Whether the operation only produces text media types (e.g. text/plain, text/calendar, text/csv).
-     * Used to emit responseType: 'text' for string-returning GETs; JSON-string endpoints (which produce
+     * Used to emit responseType: 'text' for string-returning operations; JSON-string endpoints (which produce
      * application/json) return false and keep the default JSON parser.
      */
     private boolean producesTextOnly(CodegenOperation op) {
