@@ -422,6 +422,7 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
             processPathParameters(op);
             processQueryParameters(op);
             processFormParameters(op);
+            buildHttpCall(op);
 
             // Step 5: Build TypeScript template literal URLs
             String originalPath = originalPaths.getOrDefault(op.operationId, op.path);
@@ -513,6 +514,62 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
         } else {
             op.vendorExtensions.put("x-has-query-params", false);
         }
+    }
+
+    /**
+     * Builds the {@code HttpClient} call of a service method once, so the template prints a single
+     * {@code return this.http.<method><typeArg>(<args>);} line.
+     *
+     * <p>Sets vendor extensions on the operation:</p>
+     * <ul>
+     *   <li>{@code x-http-type-arg} &mdash; the {@code <T>} type argument, empty when a {@code responseType}
+     *       option selects a non-JSON overload that already fixes the result type</li>
+     *   <li>{@code x-http-args} &mdash; the argument list: {@code url}, the payload for methods that take one,
+     *       and an options object with, in this order and only when present, {@code body} (DELETE only),
+     *       {@code responseType} and {@code observe}</li>
+     * </ul>
+     *
+     * @param op the operation whose HttpClient call should be built
+     */
+    private void buildHttpCall(CodegenOperation op) {
+        String payload = null;
+        if (op.getHasFormParams()) {
+            payload = "formData";
+        } else if (op.bodyParam != null) {
+            payload = op.bodyParam.paramName;
+        }
+
+        List<String> args = new ArrayList<>();
+        List<String> options = new ArrayList<>();
+        args.add("url");
+        if ("DELETE".equalsIgnoreCase(op.httpMethod)) {
+            // HttpClient.delete(url, options) has no body argument; the body travels in the options.
+            if (payload != null) {
+                options.add("body: " + payload);
+            }
+        } else if (payload != null) {
+            args.add(payload);
+        } else if (op.isBodyAllowed()) {
+            args.add("null");
+        }
+
+        Object responseType = op.vendorExtensions.get("x-response-type");
+        if (op.isResponseFile) {
+            options.add("responseType: 'blob'");
+            options.add("observe: 'response'");
+        } else if (responseType != null) {
+            options.add("responseType: '" + responseType + "'");
+        }
+        if (!options.isEmpty()) {
+            args.add("{ " + String.join(", ", options) + " }");
+        }
+
+        // The text and blob overloads return Observable<string> / Observable<Blob> (or HttpResponse<Blob>) and
+        // take no type argument; the JSON overload is generic in the parsed body.
+        boolean jsonResponse = !op.isResponseFile && responseType == null;
+        String typeArg = jsonResponse ? "<" + (op.returnType != null ? op.returnType : "void") + ">" : "";
+        op.vendorExtensions.put("x-http-type-arg", typeArg);
+        op.vendorExtensions.put("x-http-args", String.join(", ", args));
     }
 
     /**

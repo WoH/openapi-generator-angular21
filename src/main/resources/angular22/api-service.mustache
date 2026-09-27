@@ -62,39 +62,8 @@ export class {{classname}} {
             {{{vendorExtensions.x-form-append}}}
         }
 {{/formParams}}
-{{#isResponseFile}}
-        return this.http.{{httpMethod}}(url, formData, { responseType: 'blob', observe: 'response' });
-{{/isResponseFile}}
-{{^isResponseFile}}
-        return this.http.{{httpMethod}}<{{#returnType}}{{{.}}}{{/returnType}}{{^returnType}}void{{/returnType}}>(url, formData);
-{{/isResponseFile}}
 {{/hasFormParams}}
-{{^hasFormParams}}
-{{#bodyParam}}
-{{#isResponseFile}}
-        return this.http.{{httpMethod}}(url, {{paramName}}, { responseType: 'blob', observe: 'response' });
-{{/isResponseFile}}
-{{^isResponseFile}}
-        return this.http.{{httpMethod}}<{{#returnType}}{{{.}}}{{/returnType}}{{^returnType}}void{{/returnType}}>(url, {{paramName}});
-{{/isResponseFile}}
-{{/bodyParam}}
-{{^bodyParam}}
-{{#isResponseFile}}
-        return this.http.{{httpMethod}}(url{{#isBodyAllowed}}, null{{/isBodyAllowed}}, { responseType: 'blob', observe: 'response' });
-{{/isResponseFile}}
-{{^isResponseFile}}
-{{! Non-JSON GETs (iCal, CSV, plain text, binary) need an explicit responseType so HttpClient does }}
-{{! not JSON-parse the body. The text/blob overloads return Observable<string>/Observable<Blob>, so }}
-{{! the method's declared return type is preserved without the generic type argument. }}
-{{#vendorExtensions.x-response-type}}
-        return this.http.{{httpMethod}}(url, { responseType: '{{vendorExtensions.x-response-type}}' });
-{{/vendorExtensions.x-response-type}}
-{{^vendorExtensions.x-response-type}}
-        return this.http.{{httpMethod}}<{{#returnType}}{{{.}}}{{/returnType}}{{^returnType}}void{{/returnType}}>(url{{#isBodyAllowed}}, null{{/isBodyAllowed}});
-{{/vendorExtensions.x-response-type}}
-{{/isResponseFile}}
-{{/bodyParam}}
-{{/hasFormParams}}
+        return this.http.{{httpMethod}}{{{vendorExtensions.x-http-type-arg}}}({{{vendorExtensions.x-http-args}}});
     }
 
 {{/operation}}
