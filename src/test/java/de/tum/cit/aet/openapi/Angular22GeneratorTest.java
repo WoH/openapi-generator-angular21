@@ -109,6 +109,23 @@ class Angular22GeneratorTest {
         assertContains(api, "return this.http.delete<DeletionSummary>(url, { body: permanentUserDeletionRequest });");
     }
 
+    @Test
+    void readsTextResponsesOfNonGetOperationsAsText() throws IOException {
+        generateFixture("fixtures/text-response-openapi.yaml", Map.of());
+
+        String api = Files.readString(tempDir.resolve("api/programming-exercise-api.ts"));
+        // A text/plain body is not JSON; without responseType: 'text' HttpClient fails to parse it.
+        assertContains(api, "return this.http.put(url, generateTestsRequest, { responseType: 'text' });");
+        assertContains(api, "return this.http.post(url, null, { responseType: 'text' });");
+        assertContains(api, "return this.http.delete(url, { body: revokeTokenRequest, responseType: 'text' });");
+        // A JSON string keeps the JSON parser.
+        assertContains(api, """
+                    renameExercise(exerciseId: number): Observable<string> {
+                        const url = `${this.basePath}/api/programming-exercises/${exerciseId}/name`;
+                        return this.http.post<string>(url, null);
+                """);
+    }
+
     private void generateFixture(String fixture, Map<String, Object> additionalProperties) {
         CodegenConfigurator configurator = new CodegenConfigurator()
                 .setGeneratorName(Angular22Generator.GENERATOR_NAME)
