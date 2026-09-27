@@ -67,6 +67,8 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
      * parameters are properties of the {@code params} object there and cannot collide.
      */
     private static final Set<String> RESOURCE_LOCALS = Set.of("searchParams", "query", "params", "queryParams");
+    /** An ASCII identifier, which TypeScript accepts as a property name without quotes. */
+    private static final Pattern IDENTIFIER = Pattern.compile("[A-Za-z_$][A-Za-z0-9_$]*");
 
     /** Generator name used by the OpenAPI Generator SPI and CLI. */
     public static final String GENERATOR_NAME = "angular22";
@@ -303,6 +305,7 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
      * <ul>
      *   <li>{@code x-is-input-dto} on the model &mdash; whether this is a mutable input DTO</li>
      *   <li>{@code x-is-readonly} on each property &mdash; whether to emit the {@code readonly} keyword</li>
+     *   <li>{@code x-property-name} on each property &mdash; the property key, see {@link #toPropertyKey(String)}</li>
      * </ul>
      *
      * @param objs the map of all models, keyed by model name
@@ -326,6 +329,7 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
 
                 for (CodegenProperty property : model.vars) {
                     property.vendorExtensions.put("x-is-readonly", readonlyModels && !isInputDto);
+                    property.vendorExtensions.put("x-property-name", toPropertyKey(property.baseName));
                 }
             }
         }
@@ -861,6 +865,21 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
             }
         }
         return true;
+    }
+
+    /**
+     * Returns the TypeScript property key for a JSON key. Interfaces describe the JSON exactly, so the key is used as
+     * it is: reserved words such as {@code final} are valid property names and stay unescaped, and a key that is not
+     * an identifier (e.g. {@code x-y}) is quoted.
+     *
+     * @param jsonKey the property name in the JSON document
+     * @return the key to print in the interface
+     */
+    private static String toPropertyKey(String jsonKey) {
+        if (IDENTIFIER.matcher(jsonKey).matches()) {
+            return jsonKey;
+        }
+        return "'" + jsonKey.replace("\\", "\\\\").replace("'", "\\'") + "'";
     }
 
     /**
