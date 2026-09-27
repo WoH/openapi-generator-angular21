@@ -74,6 +74,31 @@ class Angular22GeneratorTest {
         assertContains(Files.readString(tempDir.resolve("api/faq-api.ts")), "export class FaqApi");
     }
 
+    @Test
+    void appendsMultipartFieldsAsBlobsStringsOrJsonParts() throws IOException {
+        generateFixture("fixtures/multipart-openapi.yaml", Map.of());
+
+        String api = Files.readString(tempDir.resolve("api/upload-api.ts"));
+        // Objects, arrays of objects and maps go out as one JSON part each, which Spring's @RequestPart reads.
+        assertContains(api, """
+                        if (course !== undefined && course !== null) {
+                            formData.append('course', new Blob([JSON.stringify(course)], { type: 'application/json' }));
+                        }
+                """);
+        assertContains(api, "formData.append('pages', new Blob([JSON.stringify(pages)], { type: 'application/json' }));");
+        assertContains(api, "formData.append('labels', new Blob([JSON.stringify(labels)], { type: 'application/json' }));");
+        // Binary fields are appended as they are.
+        assertContains(api, "formData.append('file', file);");
+        assertContains(api, "files.forEach(item => formData.append('files', item));");
+        // Scalars and enums become strings, the only non-Blob value FormData accepts.
+        assertContains(api, "formData.append('name', String(name));");
+        assertContains(api, "formData.append('count', String(count));");
+        assertContains(api, "formData.append('ratio', String(ratio));");
+        assertContains(api, "formData.append('active', String(active));");
+        assertContains(api, "formData.append('mode', String(mode));");
+        assertContains(api, "return this.http.post<CourseCreate>(url, formData);");
+    }
+
     private void generateFixture(String fixture, Map<String, Object> additionalProperties) {
         CodegenConfigurator configurator = new CodegenConfigurator()
                 .setGeneratorName(Angular22Generator.GENERATOR_NAME)

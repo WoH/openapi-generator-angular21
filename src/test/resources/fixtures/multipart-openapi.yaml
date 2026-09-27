@@ -1,0 +1,77 @@
+openapi: 3.1.1
+info:
+  title: Multipart API
+  version: 1.0.0
+tags:
+  - name: upload
+paths:
+  /api/uploads:
+    post:
+      tags:
+        - upload
+      operationId: createUpload
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - course
+              properties:
+                course:
+                  $ref: '#/components/schemas/CourseCreate'
+                file:
+                  type: string
+                  format: binary
+                files:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                name:
+                  type: string
+                count:
+                  type: integer
+                  format: int32
+                ratio:
+                  type: number
+                active:
+                  type: boolean
+                mode:
+                  $ref: '#/components/schemas/UploadMode'
+                pages:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Page'
+                labels:
+                  type: object
+                  additionalProperties:
+                    type: string
+      responses:
+        '200':
+          description: Created course
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CourseCreate'
+components:
+  schemas:
+    CourseCreate:
+      type: object
+      required:
+        - title
+      properties:
+        title:
+          type: string
+    UploadMode:
+      type: string
+      enum:
+        - DRAFT
+        - FINAL
+    Page:
+      type: object
+      properties:
+        number:
+          type: integer
+          format: int32
