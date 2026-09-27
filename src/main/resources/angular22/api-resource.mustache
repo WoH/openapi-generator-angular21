@@ -9,6 +9,10 @@ import { Signal } from '@angular/core';
 {{#tsImports}}
 import { {{classname}} } from '../model/{{filename}}';
 {{/tsImports}}
+{{#operations.hasResourceObjectQueryParams}}
+
+{{>queryObjectHelper}}
+{{/operations.hasResourceObjectQueryParams}}
 
 const BASE_PATH = '{{contextPath}}';
 
@@ -82,7 +86,12 @@ export function {{nickname}}Resource({{{vendorExtensions.x-resource-params}}}): 
 {{/isBoolean}}
 {{^isBoolean}}
         if (queryParams.{{vendorExtensions.x-ts-name}} !== undefined && queryParams.{{vendorExtensions.x-ts-name}} !== null) {
+{{#vendorExtensions.x-query-object}}
+            appendQueryObject(searchParams, queryParams.{{vendorExtensions.x-ts-name}});
+{{/vendorExtensions.x-query-object}}
+{{^vendorExtensions.x-query-object}}
             searchParams.set('{{baseName}}', String(queryParams.{{vendorExtensions.x-ts-name}}));
+{{/vendorExtensions.x-query-object}}
         }
 {{/isBoolean}}
 {{/isArray}}

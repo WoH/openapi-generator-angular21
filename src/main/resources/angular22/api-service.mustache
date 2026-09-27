@@ -15,6 +15,10 @@ import { Signal } from '@angular/core';
 {{#tsImports}}
 import { {{classname}} } from '../model/{{filename}}';
 {{/tsImports}}
+{{#operations.hasObjectQueryParams}}
+
+{{>queryObjectHelper}}
+{{/operations.hasObjectQueryParams}}
 {{#operations.hasServiceClass}}
 
 @Injectable({ providedIn: 'root' })
@@ -45,7 +49,12 @@ export class {{classname}} {
             {{paramName}}.forEach(item => queryParams.append('{{baseName}}', String(item)));
 {{/isArray}}
 {{^isArray}}
+{{#vendorExtensions.x-query-object}}
+            appendQueryObject(queryParams, {{paramName}});
+{{/vendorExtensions.x-query-object}}
+{{^vendorExtensions.x-query-object}}
             queryParams.set('{{baseName}}', String({{paramName}}));
+{{/vendorExtensions.x-query-object}}
 {{/isArray}}
         }
 {{/queryParams}}
@@ -152,7 +161,12 @@ export function {{nickname}}Resource({{{vendorExtensions.x-resource-params}}}): 
 {{/isBoolean}}
 {{^isBoolean}}
         if (queryParams.{{vendorExtensions.x-ts-name}} !== undefined && queryParams.{{vendorExtensions.x-ts-name}} !== null) {
+{{#vendorExtensions.x-query-object}}
+            appendQueryObject(searchParams, queryParams.{{vendorExtensions.x-ts-name}});
+{{/vendorExtensions.x-query-object}}
+{{^vendorExtensions.x-query-object}}
             searchParams.set('{{baseName}}', String(queryParams.{{vendorExtensions.x-ts-name}}));
+{{/vendorExtensions.x-query-object}}
         }
 {{/isBoolean}}
 {{/isArray}}

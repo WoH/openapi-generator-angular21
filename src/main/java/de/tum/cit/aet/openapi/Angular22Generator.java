@@ -484,6 +484,10 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
         operations.put("hasMutationOperations", !mutationOperations.isEmpty());
         operations.put("hasInlineResources", useHttpResource && !separateResources && !getOperations.isEmpty());
         operations.put("hasServiceClass", !mutationOperations.isEmpty() || !getOperations.isEmpty());
+        // The service class holds every operation, including the GETs of the inline resources in the same file;
+        // the separate resources file holds only the GETs.
+        operations.put("hasObjectQueryParams", hasObjectQueryParams(ops));
+        operations.put("hasResourceObjectQueryParams", hasObjectQueryParams(getOperations));
 
         // Step 6: Collect model imports and map to kebab-case file paths
         Set<String> modelImports = new LinkedHashSet<>();
@@ -567,6 +571,8 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
      *   <li>{@code x-params-interface-name} &mdash; PascalCase interface name (e.g., {@code GetJobsParams})</li>
      * </ul>
      *
+     * <p>Sets {@code x-query-object} on each query parameter, see {@link #isQueryObject(CodegenParameter)}.</p>
+     *
      * @param op the operation whose query parameters should be processed
      */
     private void processQueryParameters(CodegenOperation op) {
@@ -579,6 +585,7 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
             boolean allOptional = true;
             for (CodegenParameter param : op.queryParams) {
                 param.vendorExtensions.put("x-ts-name", toCamelCase(param.paramName));
+                param.vendorExtensions.put("x-query-object", isQueryObject(param));
                 if (param.required) {
                     allOptional = false;
                 }
@@ -587,6 +594,32 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
         } else {
             op.vendorExtensions.put("x-has-query-params", false);
         }
+    }
+
+    /**
+     * Whether a query parameter is an object that the default {@code style: form, explode: true} sends as one
+     * {@code key=value} pair per property: a model or a free-form object. The templates pass it to the generated
+     * {@code appendQueryObject} helper instead of {@code String()}, which would send {@code [object Object]}.
+     *
+     * @param param the query parameter to check
+     * @return {@code true} if the parameter is a form/explode object
+     */
+    private static boolean isQueryObject(CodegenParameter param) {
+        return !param.isArray && (param.isModel || param.isFreeFormObject) && "form".equals(param.style) && param.isExplode;
+    }
+
+    /**
+     * Whether any of the operations has a query parameter that {@link #isQueryObject(CodegenParameter)} accepts. A
+     * file declares the {@code appendQueryObject} helper only then, since an unused function fails
+     * {@code noUnusedLocals}.
+     *
+     * @param ops the operations rendered into one file
+     * @return {@code true} if the file needs the helper
+     */
+    private static boolean hasObjectQueryParams(List<CodegenOperation> ops) {
+        return ops.stream()
+                .flatMap(op -> op.queryParams.stream())
+                .anyMatch(param -> Boolean.TRUE.equals(param.vendorExtensions.get("x-query-object")));
     }
 
     /**
