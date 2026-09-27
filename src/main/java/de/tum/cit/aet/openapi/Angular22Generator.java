@@ -60,6 +60,14 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
     /** TypeScript types that {@code String()} turns into a form field value without losing information. */
     private static final Set<String> TS_SCALAR_TYPES = Set.of("string", "number", "boolean");
 
+    /** Local variables that every generated service method may declare next to its parameters. */
+    private static final Set<String> SERVICE_LOCALS = Set.of("url", "queryParams", "queryString", "formData", "headers");
+    /**
+     * Identifiers that a generated resource function declares next to its path and header arguments. Query
+     * parameters are properties of the {@code params} object there and cannot collide.
+     */
+    private static final Set<String> RESOURCE_LOCALS = Set.of("searchParams", "query", "params", "queryParams");
+
     /** Generator name used by the OpenAPI Generator SPI and CLI. */
     public static final String GENERATOR_NAME = "angular22";
     /** Config option for enabling httpResource-based GET resources. */
@@ -417,6 +425,7 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
             }
 
             // Step 3 & 4: Process parameters
+            renameParametersCollidingWithLocals(op);
             processPathParameters(op);
             processQueryParameters(op);
             processHeaderParameters(op);
@@ -464,6 +473,36 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
     // =============================================================================================
     // Parameter Processing Helpers
     // =============================================================================================
+
+    /**
+     * Appends {@code Param} to TypeScript parameter names that the generated code also declares as local
+     * variables (e.g. a query parameter {@code url} next to {@code const url = ...}), which would otherwise be a
+     * duplicate identifier. Only {@code paramName} changes; the wire name ({@code baseName}) stays. Runs before
+     * the path, query, header and form processing so every derived name uses the new one.
+     *
+     * @param op the operation whose parameters should be checked
+     */
+    private void renameParametersCollidingWithLocals(CodegenOperation op) {
+        // The parameter lists hold copies of each parameter, so every list is renamed. The rule depends only on the
+        // name and location, and a renamed name never collides again, so a parameter seen twice is renamed once.
+        List<CodegenParameter> params = new ArrayList<>();
+        for (List<CodegenParameter> list : Arrays.asList(op.allParams, op.bodyParams, op.pathParams, op.queryParams,
+                op.headerParams, op.formParams, op.cookieParams, op.requiredParams, op.optionalParams,
+                op.requiredAndNotNullableParams, op.notNullableParams)) {
+            if (list != null) {
+                params.addAll(list);
+            }
+        }
+        if (op.bodyParam != null) {
+            params.add(op.bodyParam);
+        }
+        for (CodegenParameter param : params) {
+            boolean resourceIdentifier = param.isPathParam || param.isHeaderParam;
+            if (SERVICE_LOCALS.contains(param.paramName) || (resourceIdentifier && RESOURCE_LOCALS.contains(param.paramName))) {
+                param.paramName = param.paramName + "Param";
+            }
+        }
+    }
 
     /**
      * Processes path parameters for a single operation: converts parameter names to camelCase
