@@ -43,8 +43,8 @@ import java.util.*;
  *   <li>{@link #processOpts()} &mdash; Reads CLI options and registers mustache templates.</li>
  *   <li>{@link #processOpenAPI(OpenAPI)} &mdash; Scans paths to determine which tags need resource files.</li>
  *   <li>{@link #postProcessAllModels(Map)} &mdash; Marks models as readonly or mutable.</li>
- *   <li>{@link #postProcessOperationsWithModels(OperationsMap, List)} &mdash; Splits operations,
- *       builds URL templates, and collects imports.</li>
+ *   <li>{@link #postProcessOperationsWithModels(OperationsMap, List)} &mdash; Builds the HttpClient calls,
+ *       resource functions and URL templates, and collects imports.</li>
  * </ol>
  *
  * <p><b>Naming Conventions</b></p>
@@ -417,7 +417,6 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
         operations.put("hasSignalArguments", getOperations.stream()
                 .anyMatch(op -> !op.pathParams.isEmpty() || !op.headerParams.isEmpty() || !op.queryParams.isEmpty()));
 
-        // An unused import fails noUnusedLocals, so the resources file imports only the models of its GETs.
         result.put("tsImports", toTsImports(ops));
         result.put("resourceTsImports", toTsImports(getOperations));
 
@@ -447,8 +446,9 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
      *   <li>{@code x-all-query-params-optional} &mdash; whether the resource's {@code params} argument may be left out</li>
      * </ul>
      *
-     * <p>Sets {@code x-query-key} on each query parameter: the property name in the params interface. It is a key,
-     * not a variable, so it keeps reserved words unescaped and never takes the {@code Param} suffix of
+     * <p>Sets {@code x-query-key} on each query parameter: the property name in the params interface, the camelCase
+     * of the parent's identifier for the wire name. The camelCase drops the {@code _} that escapes a reserved word,
+     * since a property may have that name, and the key never takes the {@code Param} suffix of
      * {@link #toParamName}.</p>
      *
      * @param op the operation whose query parameters should be processed

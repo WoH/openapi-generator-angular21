@@ -126,8 +126,6 @@ final class TypeScriptSnippets {
             args.add("{ " + String.join(", ", options) + " }");
         }
 
-        // The text and blob overloads return Observable<string> / Observable<Blob> (or HttpResponse<Blob>) and
-        // take no type argument; the JSON overload is generic in the parsed body.
         String returnType = op.returnType != null ? op.returnType : "void";
         op.vendorExtensions.put("x-http-type-arg", response == ResponseKind.JSON ? "<" + returnType + ">" : "");
         op.vendorExtensions.put("x-http-args", String.join(", ", args));

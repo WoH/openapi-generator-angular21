@@ -13,10 +13,6 @@ import org.junit.jupiter.api.io.TempDir;
 import org.openapitools.codegen.DefaultGenerator;
 import org.openapitools.codegen.config.CodegenConfigurator;
 
-/**
- * Runs the generated {@code api/query-params.ts} with Node and checks the query strings it builds, see
- * {@code src/test/typescript/query-helper.test.mjs}.
- */
 class QueryHelperTest {
 
     @TempDir

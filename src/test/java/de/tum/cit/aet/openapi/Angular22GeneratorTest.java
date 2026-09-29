@@ -190,7 +190,6 @@ class Angular22GeneratorTest {
         assertContains(api, "formData.append('formData', String(formDataParam));");
 
         String resources = Files.readString(tempDir.resolve("api/link-resources.ts"));
-        // Query parameters are properties of the params object, which never collide with a local.
         assertContains(resources, "appendQueryParam(searchParams, 'url', queryParams.url);");
         assertContains(resources, "export function searchResource(queryParam: Signal<string | undefined> | string, paramsParam: Signal<number | undefined> | number, headersParam?: Signal<string | undefined> | string, params?: Signal<SearchParams>)");
         assertContains(resources, "const queryParamValue = typeof queryParam === 'function' ? queryParam() : queryParam;");
@@ -202,8 +201,6 @@ class Angular22GeneratorTest {
     void escapesReservedWordsInEveryParameterIdentifier() throws IOException {
         generateFixture("fixtures/reserved-parameter-openapi.yaml", Map.of());
 
-        // Reserved words cannot be parameter names or variables, so the escaped name is used everywhere the parameter
-        // is an identifier.
         String api = Files.readString(tempDir.resolve("api/package-api.ts"));
         assertContains(api, "getPackage(_default: number, _package: string, _function?: string, _new?: boolean): Observable<string>");
         assertContains(api, "const _packagePath = encodeURIComponent(String(_package));");
@@ -212,7 +209,6 @@ class Angular22GeneratorTest {
         String resources = Files.readString(tempDir.resolve("api/package-resources.ts"));
         assertContains(resources, "export function getPackageResource(_default: Signal<number | undefined> | number, _package: Signal<string | undefined> | string, _function?: Signal<string | undefined> | string, params?: Signal<GetPackageParams>)");
         assertContains(resources, "return { url: `${BASE_PATH}/api/packages/${_defaultValue}/${_packagePath}${query ? `?${query}` : ''}`, headers };");
-        // A query parameter is a property of the params object, where a reserved word is a valid name.
         assertContains(resources, "new?: boolean;");
     }
 
@@ -256,7 +252,6 @@ class Angular22GeneratorTest {
                     readonly type: string;
                 }
                 """);
-        // Redeclaring the required discriminator as optional would not compile (TS2430).
         assertContains(Files.readString(tempDir.resolve("model/text-exercise.ts")), """
                 export interface TextExercise extends Exercise {
                     readonly type: string;
@@ -269,7 +264,6 @@ class Angular22GeneratorTest {
     void keepsPropertiesThatASubtypeNarrows() throws IOException {
         generateFixture("fixtures/subtype-narrowing-openapi.yaml", Map.of());
 
-        // A required QuizExercise is assignable to the parent's optional Exercise, so the subtype may declare it.
         assertContains(Files.readString(tempDir.resolve("model/quiz-participation.ts")), """
                 export interface QuizParticipation extends Participation {
                     readonly exercise: QuizExercise;
@@ -282,8 +276,6 @@ class Angular22GeneratorTest {
     void passesEveryQueryParameterToTheQueryHelper() throws IOException {
         generateFixture("fixtures/object-query-openapi.yaml", Map.of());
 
-        // The helper decides by the value how a parameter goes on the wire (QueryHelperTest): objects as one key per
-        // property, arrays and sets as repeated keys. The template passes the wire name and the value.
         String api = Files.readString(tempDir.resolve("api/score-api.ts"));
         assertContains(api, """
                         const queryParams = new URLSearchParams();

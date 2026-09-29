@@ -17,11 +17,6 @@ import org.junit.jupiter.api.io.TempDir;
 import org.openapitools.codegen.DefaultGenerator;
 import org.openapitools.codegen.config.CodegenConfigurator;
 
-/**
- * Generates every fixture with each supported combination of options and type-checks the result with the pinned
- * TypeScript compiler and Angular types in {@code src/test/typescript}, under the strict settings a consuming Angular
- * app uses ({@code strict}, {@code noUnusedLocals}).
- */
 class GeneratedCodeCompilesTest {
 
     private static final Path FIXTURES = Path.of("src/test/resources/fixtures");

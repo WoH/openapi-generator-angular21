@@ -62,7 +62,6 @@ val installTypeScript by tasks.registering(Exec::class) {
 
 tasks.test {
     useJUnitPlatform()
-    // GeneratedCodeCompilesTest runs the pinned TypeScript compiler from src/test/typescript/node_modules.
     dependsOn(installTypeScript)
 }
 
