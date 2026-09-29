@@ -403,7 +403,8 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
         // the separate resources file holds only the GETs.
         operations.put("hasQueryParams", ops.stream().anyMatch(op -> !op.queryParams.isEmpty()));
         operations.put("hasResourceQueryParams", getOperations.stream().anyMatch(op -> !op.queryParams.isEmpty()));
-        operations.put("hasFileResponses", ops.stream().anyMatch(op -> op.isResponseFile));
+        operations.put("hasFileResponses", ops.stream()
+                .anyMatch(op -> TypeScriptSnippets.ResponseKind.of(op) == TypeScriptSnippets.ResponseKind.FILE));
         operations.put("hasSignalArguments", getOperations.stream()
                 .anyMatch(op -> !op.pathParams.isEmpty() || !op.headerParams.isEmpty() || !op.queryParams.isEmpty()));
 

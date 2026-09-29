@@ -23,7 +23,7 @@ export interface {{vendorExtensions.x-params-interface-name}} {
  * @param params Optional signal containing query parameters
 {{/hasQueryParams}}
  */
-export function {{nickname}}Resource({{{vendorExtensions.x-resource-params}}}): HttpResourceRef<{{#returnType}}{{{.}}}{{/returnType}}{{^returnType}}unknown{{/returnType}} | undefined> {
+export function {{nickname}}Resource({{{vendorExtensions.x-resource-params}}}): HttpResourceRef<{{{vendorExtensions.x-resource-type}}} | undefined> {
     return {{{vendorExtensions.x-resource-factory}}}(() => {
 {{#pathParams}}
         const {{paramName}}Value = typeof {{paramName}} === 'function' ? {{paramName}}() : {{paramName}};

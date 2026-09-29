@@ -33,7 +33,7 @@ export class {{classname}} {
      * @param {{paramName}} {{description}}
 {{/allParams}}
      */
-    {{nickname}}({{#allParams}}{{paramName}}{{^required}}?{{/required}}: {{{dataType}}}{{^-last}}, {{/-last}}{{/allParams}}): Observable<{{#isResponseFile}}HttpResponse<Blob>{{/isResponseFile}}{{^isResponseFile}}{{#returnType}}{{{.}}}{{/returnType}}{{^returnType}}void{{/returnType}}{{/isResponseFile}}> {
+    {{nickname}}({{#allParams}}{{paramName}}{{^required}}?{{/required}}: {{{dataType}}}{{^-last}}, {{/-last}}{{/allParams}}): Observable<{{{vendorExtensions.x-observable-type}}}> {
 {{#pathParams}}
 {{^vendorExtensions.x-is-numeric}}
         const {{paramName}}Path = encodeURIComponent(String({{paramName}}));

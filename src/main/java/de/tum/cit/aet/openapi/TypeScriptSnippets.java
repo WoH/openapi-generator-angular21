@@ -82,6 +82,8 @@ final class TypeScriptSnippets {
      *
      * <p>Sets vendor extensions on the operation:</p>
      * <ul>
+     *   <li>{@code x-observable-type} &mdash; what the service method's {@code Observable} emits: the return type, or
+     *       the {@code HttpResponse<Blob>} of a file download</li>
      *   <li>{@code x-http-type-arg} &mdash; the {@code <T>} type argument, empty when a {@code responseType}
      *       option selects a non-JSON overload that already fixes the result type</li>
      *   <li>{@code x-http-args} &mdash; the argument list: {@code url}, the payload for methods that take one,
@@ -127,6 +129,7 @@ final class TypeScriptSnippets {
         }
 
         String returnType = op.returnType != null ? op.returnType : "void";
+        op.vendorExtensions.put("x-observable-type", response == ResponseKind.FILE ? "HttpResponse<Blob>" : returnType);
         op.vendorExtensions.put("x-http-type-arg", response == ResponseKind.JSON ? "<" + returnType + ">" : "");
         op.vendorExtensions.put("x-http-args", String.join(", ", args));
     }
@@ -141,6 +144,7 @@ final class TypeScriptSnippets {
      *       value), then the query {@code params} signal. An argument is marked optional ({@code ?}) only when
      *       every argument after it is optional too; an optional argument before a required one accepts
      *       {@code undefined} instead.</li>
+     *   <li>{@code x-resource-type} &mdash; the value type of the {@code HttpResourceRef}</li>
      *   <li>{@code x-resource-factory} &mdash; {@code httpResource<T>} for JSON, {@code httpResource.text} or
      *       {@code httpResource.blob} otherwise</li>
      *   <li>{@code x-resource-request} &mdash; what the request function returns: the URL template literal, or
@@ -177,8 +181,10 @@ final class TypeScriptSnippets {
         }
         op.vendorExtensions.put("x-resource-params", String.join(", ", rendered));
 
+        String resourceType = op.returnType != null ? op.returnType : "unknown";
+        op.vendorExtensions.put("x-resource-type", resourceType);
         op.vendorExtensions.put("x-resource-factory", switch (response) {
-            case JSON -> "httpResource<" + (op.returnType != null ? op.returnType : "unknown") + ">";
+            case JSON -> "httpResource<" + resourceType + ">";
             case TEXT -> "httpResource.text";
             case BLOB, FILE -> "httpResource.blob";
         });
