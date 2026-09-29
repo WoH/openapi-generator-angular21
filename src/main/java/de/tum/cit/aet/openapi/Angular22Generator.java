@@ -59,9 +59,9 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
     private static final Logger LOGGER = LoggerFactory.getLogger(Angular22Generator.class);
 
 
-    /** Identifiers that a generated service method or resource function declares next to its parameters. */
-    private static final Set<String> TEMPLATE_LOCALS =
-            Set.of("url", "queryParams", "queryString", "formData", "headers", "searchParams", "query", "params");
+    /** Identifiers that a generated service method or resource function declares or calls next to its parameters. */
+    private static final Set<String> TEMPLATE_LOCALS = Set.of("url", "queryParams", "queryString", "formData", "headers",
+            "searchParams", "query", "params", "appendQueryParam", "httpResource", "inject");
 
     /** Generator name used by the OpenAPI Generator SPI and CLI. */
     public static final String GENERATOR_NAME = "angular22";
@@ -515,8 +515,8 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
 
     /**
      * Returns the TypeScript identifier of a parameter. On top of the parent's escaping of reserved words, a name that
-     * the generated method bodies declare as a local variable (e.g. a query parameter {@code url} next to
-     * {@code const url = ...}) gets the suffix {@code Param}. The parent names every parameter here before it copies
+     * the generated method bodies declare or call (e.g. a query parameter {@code url} next to {@code const url = ...})
+     * gets the suffix {@code Param}. The parent names every parameter here before it copies
      * the parameter into the operation's lists, so every copy carries the same name; the wire name ({@code baseName})
      * stays.
      *
