@@ -213,6 +213,27 @@ class Angular22GeneratorTest {
     }
 
     @Test
+    void givesEachQueryParameterItsOwnKey() throws IOException {
+        generateFixture("fixtures/query-key-openapi.yaml", Map.of());
+
+        String resources = Files.readString(tempDir.resolve("api/page-resources.ts"));
+        assertContains(resources, """
+                export interface GetPagesParams {
+                    pageSize?: number;
+                    pageSize2?: number;
+                    _2fa?: boolean;
+                    new?: boolean;
+                }
+                """);
+        assertContains(resources, """
+                        appendQueryParam(searchParams, 'page_size', queryParams.pageSize);
+                        appendQueryParam(searchParams, 'pageSize', queryParams.pageSize2);
+                        appendQueryParam(searchParams, '2fa', queryParams._2fa);
+                        appendQueryParam(searchParams, 'new', queryParams.new);
+                """);
+    }
+
+    @Test
     void namesModelPropertiesExactlyLikeTheirJsonKeys() throws IOException {
         generateFixture("fixtures/reserved-property-openapi.yaml", Map.of());
 
