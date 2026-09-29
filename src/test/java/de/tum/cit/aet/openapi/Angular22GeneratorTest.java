@@ -268,6 +268,19 @@ class Angular22GeneratorTest {
     }
 
     @Test
+    void keepsPropertiesThatASubtypeNarrows() throws IOException {
+        generateFixture("fixtures/subtype-narrowing-openapi.yaml", Map.of());
+
+        // A required QuizExercise is assignable to the parent's optional Exercise, so the subtype may declare it.
+        assertContains(Files.readString(tempDir.resolve("model/quiz-participation.ts")), """
+                export interface QuizParticipation extends Participation {
+                    readonly exercise: QuizExercise;
+                    readonly submitted?: boolean;
+                }
+                """);
+    }
+
+    @Test
     void expandsObjectQueryParametersIntoOneKeyPerProperty() throws IOException {
         generateFixture("fixtures/object-query-openapi.yaml", Map.of());
 
