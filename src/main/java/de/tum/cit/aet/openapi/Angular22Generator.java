@@ -211,9 +211,9 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
     // =============================================================================================
 
     /**
-     * Scans all paths in the OpenAPI spec to classify each tag as having GET operations,
-     * mutation operations, or both. Tags without any GET operations get their resource file
-     * added to the generator's ignore list, since there is nothing to wrap in an httpResource.
+     * Scans all paths in the OpenAPI spec to find the tags that have GET operations. Tags without any GET
+     * operations get their resource file added to the generator's ignore list, since there is nothing to wrap
+     * in an httpResource.
      *
      * @param openAPI the parsed OpenAPI specification
      */
@@ -257,12 +257,12 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
     }
 
     /**
-     * Records whether a single operation is a GET or a mutation for each of its tags.
+     * Records each tag of a single operation, and whether the operation is a GET.
      * Operations without tags are assigned to the "default" tag.
      *
      * @param operation  the OpenAPI operation to classify (may be {@code null})
      * @param isGet      {@code true} if this is a GET operation, {@code false} for mutations
-     * @param usageByTag the map accumulating GET/mutation flags per tag
+     * @param usageByTag the map accumulating the GET flag per tag
      */
     private void addOperationUsage(Operation operation, boolean isGet, Map<String, TagUsage> usageByTag) {
         if (operation == null) {
@@ -278,16 +278,13 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
             TagUsage usage = usageByTag.computeIfAbsent(sanitizedTag, key -> new TagUsage());
             if (isGet) {
                 usage.hasGet = true;
-            } else {
-                usage.hasMutation = true;
             }
         }
     }
 
-    /** Tracks whether a given API tag has GET and/or mutation operations. */
+    /** Tracks whether a given API tag has GET operations. */
     private static final class TagUsage {
         private boolean hasGet;
-        private boolean hasMutation;
     }
 
     // =============================================================================================
@@ -303,7 +300,6 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
      *
      * <p>The decision is passed to the mustache template via vendor extensions:</p>
      * <ul>
-     *   <li>{@code x-is-input-dto} on the model &mdash; whether this is a mutable input DTO</li>
      *   <li>{@code x-is-readonly} on each property &mdash; whether to emit the {@code readonly} keyword</li>
      *   <li>{@code x-property-name} on each property &mdash; the property key, see {@link #toPropertyKey(String)}</li>
      * </ul>
@@ -324,9 +320,6 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
                         model.name.endsWith("Update") ||
                         model.name.endsWith("Request") ||
                         model.name.endsWith("Input");
-
-                model.vendorExtensions.put("x-is-input-dto", isInputDto);
-                model.vendorExtensions.put("x-use-readonly", readonlyModels && !isInputDto);
 
                 for (CodegenProperty property : model.vars) {
                     property.vendorExtensions.put("x-is-readonly", readonlyModels && !isInputDto);
@@ -398,49 +391,18 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
 
         OperationsMap result = super.postProcessOperationsWithModels(objs, allModels);
 
-        // Each model must be imported from its own file. The default `imports` entries do not carry a
-        // per-entry filename, so `{{classFilename}}` in the api templates falls through to the
-        // enclosing API's filename and every model is (wrongly) imported from the same path. Compute
-        // the correct model filename per import here.
-        Object importsObj = result.get("imports");
-        if (importsObj instanceof List<?> importsList) {
-            for (Object item : importsList) {
-                if (item instanceof Map<?, ?> rawImport) {
-                    Object className = rawImport.get("classname");
-                    if (className == null) {
-                        className = rawImport.get("import");
-                    }
-                    if (className != null) {
-                        String simpleName = className.toString();
-                        simpleName = simpleName.substring(simpleName.lastIndexOf('.') + 1);
-                        @SuppressWarnings("unchecked")
-                        Map<String, Object> mutableImport = (Map<String, Object>) rawImport;
-                        mutableImport.put("classFilename", toModelFilename(simpleName));
-                    }
-                }
-            }
-        }
-
         OperationMap operations = result.getOperations();
         List<CodegenOperation> ops = operations.getOperation();
 
-        // Step 2: Split into GETs (httpResource) and mutations (HttpClient)
+        // Step 2: Collect the GETs, which also get an httpResource
         List<CodegenOperation> getOperations = new ArrayList<>();
-        List<CodegenOperation> mutationOperations = new ArrayList<>();
 
         for (CodegenOperation op : ops) {
-            op.vendorExtensions.put("x-use-inject", useInjectFunction);
-
             boolean isGet = "GET".equalsIgnoreCase(op.httpMethod);
             if (isGet) {
                 op.vendorExtensions.put("x-is-get", true);
-                op.vendorExtensions.put("x-use-http-resource", useHttpResource && separateResources);
                 op.vendorExtensions.put("x-inline-resource", useHttpResource && !separateResources);
                 getOperations.add(op);
-            } else {
-                op.vendorExtensions.put("x-is-get", false);
-                op.vendorExtensions.put("x-is-mutation", true);
-                mutationOperations.add(op);
             }
 
             // Non-JSON responses need an explicit Angular HttpClient responseType, for every HTTP method.
@@ -469,7 +431,6 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
             String pathTemplate = buildPathTemplate(op, originalPath, false);
             String resourcePathTemplate = buildPathTemplate(op, originalPath, true);
             op.vendorExtensions.put("xPathTemplate", pathTemplate);
-            op.vendorExtensions.put("xResourcePathTemplate", resourcePathTemplate);
             if (pathTemplate != null && !pathTemplate.isBlank()) {
                 op.path = pathTemplate;
             }
@@ -478,12 +439,7 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
             }
         }
 
-        operations.put("getOperations", getOperations);
-        operations.put("mutationOperations", mutationOperations);
-        operations.put("hasGetOperations", !getOperations.isEmpty());
-        operations.put("hasMutationOperations", !mutationOperations.isEmpty());
         operations.put("hasInlineResources", useHttpResource && !separateResources && !getOperations.isEmpty());
-        operations.put("hasServiceClass", !mutationOperations.isEmpty() || !getOperations.isEmpty());
         // The service class holds every operation, including the GETs of the inline resources in the same file;
         // the separate resources file holds only the GETs.
         operations.put("hasObjectQueryParams", hasObjectQueryParams(ops));

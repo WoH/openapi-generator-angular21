@@ -3,11 +3,9 @@
  * {{classname}} - API service
  * @generated from OpenAPI specification
  */
-{{#operations.hasServiceClass}}
 import { HttpClient{{#operations.hasFileResponses}}, HttpResponse{{/operations.hasFileResponses}} } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-{{/operations.hasServiceClass}}
 {{#operations.hasInlineResources}}
 import { httpResource, HttpResourceRef } from '@angular/common/http';
 {{#operations.hasSignalArguments}}
@@ -21,7 +19,6 @@ import { {{classname}} } from '../model/{{filename}}';
 
 {{>queryObjectHelper}}
 {{/operations.hasObjectQueryParams}}
-{{#operations.hasServiceClass}}
 
 @Injectable({ providedIn: 'root' })
 export class {{classname}} {
@@ -88,7 +85,6 @@ export class {{classname}} {
 {{/operation}}
 {{/operations}}
 }
-{{/operations.hasServiceClass}}
 {{#operations.hasInlineResources}}
 
 const BASE_PATH = '{{contextPath}}';
