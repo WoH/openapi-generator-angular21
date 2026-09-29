@@ -1,15 +1,10 @@
 package de.tum.cit.aet.openapi;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
@@ -45,13 +40,8 @@ class GeneratedCodeCompilesTest {
                 { "extends": "%s", "include": ["**/*.ts"], "exclude": ["node_modules"] }
                 """.formatted(TYPESCRIPT.resolve("tsconfig.json")));
 
-        Process tsc = new ProcessBuilder("node", TYPESCRIPT.resolve("node_modules/typescript/bin/tsc").toString(), "-p", "tsconfig.json")
-                .directory(tempDir.toFile())
-                .redirectErrorStream(true)
-                .start();
-        String output = new String(tsc.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
-        assertTrue(tsc.waitFor(2, TimeUnit.MINUTES), "tsc did not finish");
-        assertEquals(0, tsc.exitValue(), () -> "Generated code does not compile:\n" + output);
+        NodeProcess.assertSucceeds(tempDir, "Generated code does not compile",
+                TYPESCRIPT.resolve("node_modules/typescript/bin/tsc").toString(), "-p", "tsconfig.json");
     }
 
     private static void generate(Path spec, Path outputDir, Map<String, String> additionalProperties) {
