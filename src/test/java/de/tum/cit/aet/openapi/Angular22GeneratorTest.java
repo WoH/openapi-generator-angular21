@@ -292,7 +292,7 @@ class Angular22GeneratorTest {
                         appendQueryParam(queryParams, 'teamIds', teamIds);
                         const queryString = queryParams.toString();
                 """);
-        assertContains(api, "function appendQueryParam(");
+        assertContains(api, "import { appendQueryParam } from './query-params';");
 
         String resources = Files.readString(tempDir.resolve("api/score-resources.ts"));
         assertContains(resources, """
@@ -302,7 +302,7 @@ class Angular22GeneratorTest {
                         appendQueryParam(searchParams, 'teamIds', queryParams.teamIds);
                         const query = searchParams.toString();
                 """);
-        assertContains(resources, "function appendQueryParam(");
+        assertContains(resources, "import { appendQueryParam } from './query-params';");
     }
 
     private void generateFixture(String fixture, Map<String, Object> additionalProperties) {

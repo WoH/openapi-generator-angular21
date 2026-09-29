@@ -12,8 +12,7 @@ import { Signal } from '@angular/core';
 import { {{classname}} } from '../model/{{filename}}';
 {{/resourceTsImports}}
 {{#operations.hasResourceQueryParams}}
-
-{{>queryParamHelper}}
+import { appendQueryParam } from './query-params';
 {{/operations.hasResourceQueryParams}}
 
 const BASE_PATH = '{{contextPath}}';

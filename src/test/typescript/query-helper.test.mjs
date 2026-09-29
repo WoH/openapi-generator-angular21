@@ -2,8 +2,10 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import ts from 'typescript';
 
-const source = readFileSync(new URL('../../main/resources/angular22/queryParamHelper.mustache', import.meta.url), 'utf8');
-const appendQueryParam = new Function(`${ts.transpile(source, { target: ts.ScriptTarget.ES2022 })}\nreturn appendQueryParam;`)();
+const source = readFileSync(process.argv[2], 'utf8');
+const exports = {};
+new Function('exports', ts.transpile(source, { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }))(exports);
+const { appendQueryParam } = exports;
 
 function query(name, value) {
     const params = new URLSearchParams();

@@ -16,8 +16,7 @@ import { Signal } from '@angular/core';
 import { {{classname}} } from '../model/{{filename}}';
 {{/tsImports}}
 {{#operations.hasQueryParams}}
-
-{{>queryParamHelper}}
+import { appendQueryParam } from './query-params';
 {{/operations.hasQueryParams}}
 
 @Injectable({ providedIn: 'root' })

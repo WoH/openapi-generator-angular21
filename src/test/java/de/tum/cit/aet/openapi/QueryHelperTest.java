@@ -9,16 +9,28 @@ import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.openapitools.codegen.DefaultGenerator;
+import org.openapitools.codegen.config.CodegenConfigurator;
 
 /**
- * Runs the query helper that the generated code embeds with Node and checks the query strings it builds, see
+ * Runs the generated {@code api/query-params.ts} with Node and checks the query strings it builds, see
  * {@code src/test/typescript/query-helper.test.mjs}.
  */
 class QueryHelperTest {
 
+    @TempDir
+    Path tempDir;
+
     @Test
     void appendsQueryParametersTheWaySpringBindsThem() throws IOException, InterruptedException {
-        Process node = new ProcessBuilder("node", "query-helper.test.mjs")
+        CodegenConfigurator configurator = new CodegenConfigurator()
+                .setGeneratorName(Angular22Generator.GENERATOR_NAME)
+                .setInputSpec(Path.of("src/test/resources/fixtures/object-query-openapi.yaml").toAbsolutePath().toString())
+                .setOutputDir(tempDir.toString());
+        new DefaultGenerator().opts(configurator.toClientOptInput()).generate();
+
+        Process node = new ProcessBuilder("node", "query-helper.test.mjs", tempDir.resolve("api/query-params.ts").toString())
                 .directory(Path.of("src/test/typescript").toFile())
                 .redirectErrorStream(true)
                 .start();

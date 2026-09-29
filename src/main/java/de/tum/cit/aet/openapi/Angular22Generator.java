@@ -36,6 +36,9 @@ import java.util.regex.Pattern;
  *       plus const enum objects for runtime enum access (e.g., {@code JobDetailDTOStateEnum.Draft}).</li>
  * </ol>
  *
+ * <p>One {@code api/query-params.ts} per client holds {@code appendQueryParam}, which the API and resource files
+ * with query parameters import.</p>
+ *
  * <p><b>Generation Pipeline</b></p>
  * The generator hooks into four lifecycle stages of the OpenAPI Generator framework:
  * <ol>
@@ -172,6 +175,7 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
         super.processOpts();
 
         supportingFiles.clear();
+        supportingFiles.add(new SupportingFile("query-params.mustache", "api", "query-params.ts"));
 
         if (additionalProperties.containsKey(USE_HTTP_RESOURCE)) {
             useHttpResource = Boolean.parseBoolean(additionalProperties.get(USE_HTTP_RESOURCE).toString());
