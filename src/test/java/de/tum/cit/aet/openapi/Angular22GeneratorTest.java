@@ -201,6 +201,24 @@ class Angular22GeneratorTest {
     }
 
     @Test
+    void escapesReservedWordsInEveryParameterIdentifier() throws IOException {
+        generateFixture("fixtures/reserved-parameter-openapi.yaml", Map.of());
+
+        // Reserved words cannot be parameter names or variables, so the escaped name is used everywhere the parameter
+        // is an identifier.
+        String api = Files.readString(tempDir.resolve("api/package-api.ts"));
+        assertContains(api, "getPackage(_default: number, _package: string, _function?: string, _new?: boolean): Observable<string>");
+        assertContains(api, "const _packagePath = encodeURIComponent(String(_package));");
+        assertContains(api, "const url = `${this.basePath}/api/packages/${_default}/${_packagePath}${queryString ? `?${queryString}` : ''}`;");
+
+        String resources = Files.readString(tempDir.resolve("api/package-resources.ts"));
+        assertContains(resources, "export function getPackageResource(_default: Signal<number | undefined> | number, _package: Signal<string | undefined> | string, _function?: Signal<string | undefined> | string, params?: Signal<GetPackageParams>)");
+        assertContains(resources, "return { url: `${BASE_PATH}/api/packages/${_defaultValue}/${_packagePath}${query ? `?${query}` : ''}`, headers };");
+        // A query parameter is a property of the params object, where a reserved word is a valid name.
+        assertContains(resources, "new?: boolean;");
+    }
+
+    @Test
     void namesModelPropertiesExactlyLikeTheirJsonKeys() throws IOException {
         generateFixture("fixtures/reserved-property-openapi.yaml", Map.of());
 
