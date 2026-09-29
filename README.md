@@ -74,12 +74,12 @@ export class CourseApi {
     }
 
     deleteCourse(courseId: number): Observable<void> {
-        const url = `${this.basePath}/courses/$${courseId}`;
-        return this.http.delete(url);
+        const url = `${this.basePath}/courses/${courseId}`;
+        return this.http.delete<void>(url);
     }
 
     updateCourse(courseId: number, courseUpdate: CourseUpdate): Observable<Course> {
-        const url = `${this.basePath}/courses/$${courseId}`;
+        const url = `${this.basePath}/courses/${courseId}`;
         return this.http.put<Course>(url, courseUpdate);
     }
 }
@@ -87,6 +87,8 @@ export class CourseApi {
 
 ### Resources (GET with httpResource)
 ```typescript
+import { appendQueryParam } from './query-params';
+
 const BASE_PATH = '/api';
 
 export interface GetAllCoursesParams {
@@ -99,27 +101,28 @@ export function getAllCoursesResource(params?: Signal<GetAllCoursesParams>): Htt
     return httpResource<Array<Course>>(() => {
         const queryParams = params?.() ?? {};
         const searchParams = new URLSearchParams();
-        if (queryParams.onlyActive !== undefined) {
-            searchParams.set('onlyActive', String(queryParams.onlyActive));
-        }
-        if (queryParams.page !== undefined && queryParams.page !== null) {
-            searchParams.set('page', String(queryParams.page));
-        }
-        if (queryParams.size !== undefined && queryParams.size !== null) {
-            searchParams.set('size', String(queryParams.size));
-        }
+        appendQueryParam(searchParams, 'onlyActive', queryParams.onlyActive);
+        appendQueryParam(searchParams, 'page', queryParams.page);
+        appendQueryParam(searchParams, 'size', queryParams.size);
         const query = searchParams.toString();
         return `${BASE_PATH}/courses${query ? `?${query}` : ''}`;
     });
 }
 
-export function getCourseResource(courseId: Signal<number> | number): HttpResourceRef<Course | undefined> {
+export function getCourseResource(courseId: Signal<number | undefined> | number): HttpResourceRef<Course | undefined> {
     return httpResource<Course>(() => {
         const courseIdValue = typeof courseId === 'function' ? courseId() : courseId;
+        if (courseIdValue === undefined) {
+            return undefined;
+        }
         return `${BASE_PATH}/courses/${courseIdValue}`;
     });
 }
 ```
+
+`api/query-params.ts` holds `appendQueryParam`, which every API and resources file with query parameters imports. It
+leaves out `null` and `undefined`, repeats arrays and sets, and sends an object as one key per property, the way
+Spring binds a query DTO.
 
 ## Installation
 
@@ -317,6 +320,9 @@ git clone https://github.com/ls1intum/openapi-generator-angular22.git
 cd openapi-generator-angular22
 ./gradlew build
 ```
+
+The tests type-check the generated code with the TypeScript compiler pinned in `src/test/typescript`, so the build
+needs Node.js and npm.
 
 ## Trying the Example Generator
 
