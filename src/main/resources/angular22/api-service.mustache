@@ -15,10 +15,10 @@ import { Signal } from '@angular/core';
 {{#tsImports}}
 import { {{classname}} } from '../model/{{filename}}';
 {{/tsImports}}
-{{#operations.hasObjectQueryParams}}
+{{#operations.hasQueryParams}}
 
-{{>queryObjectHelper}}
-{{/operations.hasObjectQueryParams}}
+{{>queryParamHelper}}
+{{/operations.hasQueryParams}}
 
 @Injectable({ providedIn: 'root' })
 export class {{classname}} {
@@ -43,19 +43,7 @@ export class {{classname}} {
 {{#hasQueryParams}}
         const queryParams = new URLSearchParams();
 {{#queryParams}}
-        if ({{paramName}} !== undefined && {{paramName}} !== null) {
-{{#isArray}}
-            {{paramName}}.forEach(item => queryParams.append('{{baseName}}', String(item)));
-{{/isArray}}
-{{^isArray}}
-{{#vendorExtensions.x-query-object}}
-            appendQueryObject(queryParams, {{paramName}});
-{{/vendorExtensions.x-query-object}}
-{{^vendorExtensions.x-query-object}}
-            queryParams.set('{{baseName}}', String({{paramName}}));
-{{/vendorExtensions.x-query-object}}
-{{/isArray}}
-        }
+        appendQueryParam(queryParams, '{{baseName}}', {{paramName}});
 {{/queryParams}}
         const queryString = queryParams.toString();
         const url = `${this.basePath}{{{vendorExtensions.xPathTemplate}}}${queryString ? `?${queryString}` : ''}`;

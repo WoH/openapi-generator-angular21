@@ -52,28 +52,7 @@ export function {{nickname}}Resource({{{vendorExtensions.x-resource-params}}}): 
 {{/vendorExtensions.x-all-query-params-optional}}
         const searchParams = new URLSearchParams();
 {{#queryParams}}
-{{#isArray}}
-        if (queryParams.{{vendorExtensions.x-query-key}}?.length) {
-            queryParams.{{vendorExtensions.x-query-key}}.forEach(value => searchParams.append('{{baseName}}', String(value)));
-        }
-{{/isArray}}
-{{^isArray}}
-{{#isBoolean}}
-        if (queryParams.{{vendorExtensions.x-query-key}} !== undefined) {
-            searchParams.set('{{baseName}}', String(queryParams.{{vendorExtensions.x-query-key}}));
-        }
-{{/isBoolean}}
-{{^isBoolean}}
-        if (queryParams.{{vendorExtensions.x-query-key}} !== undefined && queryParams.{{vendorExtensions.x-query-key}} !== null) {
-{{#vendorExtensions.x-query-object}}
-            appendQueryObject(searchParams, queryParams.{{vendorExtensions.x-query-key}});
-{{/vendorExtensions.x-query-object}}
-{{^vendorExtensions.x-query-object}}
-            searchParams.set('{{baseName}}', String(queryParams.{{vendorExtensions.x-query-key}}));
-{{/vendorExtensions.x-query-object}}
-        }
-{{/isBoolean}}
-{{/isArray}}
+        appendQueryParam(searchParams, '{{baseName}}', queryParams.{{vendorExtensions.x-query-key}});
 {{/queryParams}}
         const query = searchParams.toString();
 {{/vendorExtensions.x-has-query-params}}

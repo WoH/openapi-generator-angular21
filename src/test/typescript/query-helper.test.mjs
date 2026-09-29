@@ -2,16 +2,25 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import ts from 'typescript';
 
-const source = readFileSync(new URL('../../main/resources/angular22/queryObjectHelper.mustache', import.meta.url), 'utf8');
-const appendQueryObject = new Function(`${ts.transpile(source, { target: ts.ScriptTarget.ES2022 })}\nreturn appendQueryObject;`)();
+const source = readFileSync(new URL('../../main/resources/angular22/queryParamHelper.mustache', import.meta.url), 'utf8');
+const appendQueryParam = new Function(`${ts.transpile(source, { target: ts.ScriptTarget.ES2022 })}\nreturn appendQueryParam;`)();
 
-function query(value) {
+function query(name, value) {
     const params = new URLSearchParams();
-    appendQueryObject(params, value);
+    appendQueryParam(params, name, value);
     return params.toString();
 }
 
+assert.equal(query('searchTerm', 'a b'), 'searchTerm=a+b');
+assert.equal(query('page', 0), 'page=0', 'a falsy number is sent');
+assert.equal(query('includeTeams', false), 'includeTeams=false', 'false is sent');
+assert.equal(query('searchTerm', ''), 'searchTerm=', 'an empty string is sent');
+assert.equal(query('page', null), '', 'null is left out');
+assert.equal(query('page', undefined), '', 'undefined is left out');
+assert.equal(query('authorities', ['USER', 'TA']), 'authorities=USER&authorities=TA');
+assert.equal(query('teamIds', new Set([4, 5])), 'teamIds=4&teamIds=5');
 assert.equal(
-    query({ searchTerm: 'a b', page: 0, authorities: ['USER', 'TA'], exerciseIds: new Set([4, 5]), scoreRange: { lower: 0.5 }, sortedBy: null }),
+    query('search', { searchTerm: 'a b', page: 0, authorities: ['USER', 'TA'], exerciseIds: new Set([4, 5]), scoreRange: { lower: 0.5 }, sortedBy: null }),
     'searchTerm=a+b&page=0&authorities=USER&authorities=TA&exerciseIds=4&exerciseIds=5&scoreRange.lower=0.5',
+    'an object sends one key per property without its own name, nested objects as dotted keys',
 );

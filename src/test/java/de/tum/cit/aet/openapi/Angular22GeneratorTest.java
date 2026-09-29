@@ -1,6 +1,5 @@
 package de.tum.cit.aet.openapi;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -177,16 +176,14 @@ class Angular22GeneratorTest {
         assertContains(api, """
                     getLinkPreview(urlParam: string): Observable<LinkPreview> {
                         const queryParams = new URLSearchParams();
-                        if (urlParam !== undefined && urlParam !== null) {
-                            queryParams.set('url', String(urlParam));
-                        }
+                        appendQueryParam(queryParams, 'url', urlParam);
                         const queryString = queryParams.toString();
                         const url = `${this.basePath}/api/link-preview${queryString ? `?${queryString}` : ''}`;
                 """);
         assertContains(api, "search(queryParam: string, paramsParam: number, headersParam?: string, queryStringParam?: string, queryParamsParam?: string): Observable<Array<LinkPreview>>");
         assertContains(api, "const queryParamPath = encodeURIComponent(String(queryParam));");
-        assertContains(api, "queryParams.set('queryString', String(queryStringParam));");
-        assertContains(api, "queryParams.set('queryParams', String(queryParamsParam));");
+        assertContains(api, "appendQueryParam(queryParams, 'queryString', queryStringParam);");
+        assertContains(api, "appendQueryParam(queryParams, 'queryParams', queryParamsParam);");
         assertContains(api, "const url = `${this.basePath}/api/search/${queryParamPath}/${paramsParam}${queryString ? `?${queryString}` : ''}`;");
         assertContains(api, "headers['headers'] = String(headersParam);");
         assertContains(api, "upload(formDataParam?: string): Observable<void>");
@@ -194,7 +191,7 @@ class Angular22GeneratorTest {
 
         String resources = Files.readString(tempDir.resolve("api/link-resources.ts"));
         // Query parameters are properties of the params object, which never collide with a local.
-        assertContains(resources, "searchParams.set('url', String(queryParams.url));");
+        assertContains(resources, "appendQueryParam(searchParams, 'url', queryParams.url);");
         assertContains(resources, "export function searchResource(queryParam: Signal<string | undefined> | string, paramsParam: Signal<number | undefined> | number, headersParam?: Signal<string | undefined> | string, params?: Signal<SearchParams>)");
         assertContains(resources, "const queryParamValue = typeof queryParam === 'function' ? queryParam() : queryParam;");
         assertContains(resources, "const headersParamValue = typeof headersParam === 'function' ? headersParam() : headersParam;");
@@ -282,63 +279,30 @@ class Angular22GeneratorTest {
     }
 
     @Test
-    void expandsObjectQueryParametersIntoOneKeyPerProperty() throws IOException {
+    void passesEveryQueryParameterToTheQueryHelper() throws IOException {
         generateFixture("fixtures/object-query-openapi.yaml", Map.of());
 
-        // String(search) sends search=[object Object]. OpenAPI's default form/explode style sends one key per
-        // property, which is what Spring binds to a DTO.
+        // The helper decides by the value how a parameter goes on the wire (QueryHelperTest): objects as one key per
+        // property, arrays and sets as repeated keys. The template passes the wire name and the value.
         String api = Files.readString(tempDir.resolve("api/score-api.ts"));
         assertContains(api, """
-                        if (search !== undefined && search !== null) {
-                            appendQueryObject(queryParams, search);
-                        }
+                        const queryParams = new URLSearchParams();
+                        appendQueryParam(queryParams, 'search', search);
+                        appendQueryParam(queryParams, 'includeTeams', includeTeams);
+                        appendQueryParam(queryParams, 'teamIds', teamIds);
+                        const queryString = queryParams.toString();
                 """);
-        assertContains(api, "queryParams.set('includeTeams', String(includeTeams));");
-        assertContains(api, """
-                /**
-                 * Appends an object query parameter as OpenAPI form/explode and Spring's data binding expect it: one key per
-                 * property, arrays as repeated keys, nested objects as dotted keys.
-                 */
-                function appendQueryObject(target: URLSearchParams, value: object, prefix?: string): void {
-                    for (const [key, entry] of Object.entries(value)) {
-                        const name = prefix ? `${prefix}.${key}` : key;
-                        if (entry === undefined || entry === null) {
-                            continue;
-                        }
-                        if (Array.isArray(entry)) {
-                            entry.forEach((item) => target.append(name, String(item)));
-                        } else if (typeof entry === 'object') {
-                            appendQueryObject(target, entry, name);
-                        } else {
-                            target.append(name, String(entry));
-                        }
-                    }
-                }
-                """);
-        assertEquals(1, countOccurrences(api, "function appendQueryObject("));
+        assertContains(api, "function appendQueryParam(");
 
         String resources = Files.readString(tempDir.resolve("api/score-resources.ts"));
         assertContains(resources, """
-                        if (queryParams.search !== undefined && queryParams.search !== null) {
-                            appendQueryObject(searchParams, queryParams.search);
-                        }
+                        const searchParams = new URLSearchParams();
+                        appendQueryParam(searchParams, 'search', queryParams.search);
+                        appendQueryParam(searchParams, 'includeTeams', queryParams.includeTeams);
+                        appendQueryParam(searchParams, 'teamIds', queryParams.teamIds);
+                        const query = searchParams.toString();
                 """);
-        assertEquals(1, countOccurrences(resources, "function appendQueryObject("));
-
-        // An unused helper would fail noUnusedLocals, so a tag without object query parameters does not declare it.
-        assertFalse(Files.readString(tempDir.resolve("api/course-api.ts")).contains("appendQueryObject"));
-        assertFalse(Files.readString(tempDir.resolve("api/course-resources.ts")).contains("appendQueryObject"));
-    }
-
-    @Test
-    void declaresTheQueryObjectHelperOnceNextToInlineResources() throws IOException {
-        generateFixture("fixtures/object-query-openapi.yaml", Map.of("separateResources", "false"));
-
-        String api = Files.readString(tempDir.resolve("api/score-api.ts"));
-        assertContains(api, "appendQueryObject(queryParams, search);");
-        assertContains(api, "appendQueryObject(searchParams, queryParams.search);");
-        assertEquals(1, countOccurrences(api, "function appendQueryObject("));
-        assertFalse(Files.readString(tempDir.resolve("api/course-api.ts")).contains("appendQueryObject"));
+        assertContains(resources, "function appendQueryParam(");
     }
 
     private void generateFixture(String fixture, Map<String, Object> additionalProperties) {
@@ -352,16 +316,5 @@ class Angular22GeneratorTest {
 
     private static void assertContains(String actual, String expected) {
         assertTrue(actual.contains(expected), () -> "Expected generated output to contain:\n" + expected + "\n\nActual output:\n" + actual);
-    }
-
-    /**
-     * Counts the non-overlapping occurrences of {@code needle} in {@code text}.
-     */
-    private static int countOccurrences(String text, String needle) {
-        int count = 0;
-        for (int index = text.indexOf(needle); index >= 0; index = text.indexOf(needle, index + needle.length())) {
-            count++;
-        }
-        return count;
     }
 }

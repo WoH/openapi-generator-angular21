@@ -11,10 +11,10 @@ import { Signal } from '@angular/core';
 {{#resourceTsImports}}
 import { {{classname}} } from '../model/{{filename}}';
 {{/resourceTsImports}}
-{{#operations.hasResourceObjectQueryParams}}
+{{#operations.hasResourceQueryParams}}
 
-{{>queryObjectHelper}}
-{{/operations.hasResourceObjectQueryParams}}
+{{>queryParamHelper}}
+{{/operations.hasResourceQueryParams}}
 
 const BASE_PATH = '{{contextPath}}';
 

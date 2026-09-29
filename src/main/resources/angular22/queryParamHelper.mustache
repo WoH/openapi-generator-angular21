@@ -1,0 +1,20 @@
+/**
+ * Appends a query parameter as OpenAPI form/explode and Spring's data binding expect it: nothing for null or
+ * undefined, arrays and sets as repeated keys, an object as one key per property and nested objects as dotted keys.
+ */
+function appendQueryParam(target: URLSearchParams, name: string, value: unknown, nested = false): void {
+    if (value === undefined || value === null) {
+        return;
+    }
+    if (Array.isArray(value) || value instanceof Set) {
+        for (const item of value) {
+            target.append(name, String(item));
+        }
+    } else if (typeof value === 'object') {
+        for (const [key, entry] of Object.entries(value)) {
+            appendQueryParam(target, nested ? `${name}.${key}` : key, entry, true);
+        }
+    } else {
+        target.append(name, String(value));
+    }
+}
