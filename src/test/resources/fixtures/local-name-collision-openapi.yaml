@@ -55,6 +55,16 @@ paths:
           required: false
           schema:
             type: string
+        - name: searchParams
+          in: header
+          required: false
+          schema:
+            type: string
+        - name: appendQueryParam
+          in: query
+          required: false
+          schema:
+            type: string
       responses:
         '200':
           description: Matching links

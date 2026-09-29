@@ -180,7 +180,7 @@ class Angular22GeneratorTest {
                         const queryString = queryParams.toString();
                         const url = `${this.basePath}/api/link-preview${queryString ? `?${queryString}` : ''}`;
                 """);
-        assertContains(api, "search(queryParam: string, paramsParam: number, headersParam?: string, queryStringParam?: string, queryParamsParam?: string): Observable<Array<LinkPreview>>");
+        assertContains(api, "search(queryParam: string, paramsParam: number, headersParam?: string, queryStringParam?: string, queryParamsParam?: string, searchParamsParam?: string, appendQueryParamParam?: string): Observable<Array<LinkPreview>>");
         assertContains(api, "const queryParamPath = encodeURIComponent(String(queryParam));");
         assertContains(api, "appendQueryParam(queryParams, 'queryString', queryStringParam);");
         assertContains(api, "appendQueryParam(queryParams, 'queryParams', queryParamsParam);");
@@ -191,7 +191,7 @@ class Angular22GeneratorTest {
 
         String resources = Files.readString(tempDir.resolve("api/link-resources.ts"));
         assertContains(resources, "appendQueryParam(searchParams, 'url', queryParams.url);");
-        assertContains(resources, "export function searchResource(queryParam: Signal<string | undefined> | string, paramsParam: Signal<number | undefined> | number, headersParam?: Signal<string | undefined> | string, params?: Signal<SearchParams>)");
+        assertContains(resources, "export function searchResource(queryParam: Signal<string | undefined> | string, paramsParam: Signal<number | undefined> | number, headersParam?: Signal<string | undefined> | string, searchParamsParam?: Signal<string | undefined> | string, params?: Signal<SearchParams>)");
         assertContains(resources, "const queryParamValue = typeof queryParam === 'function' ? queryParam() : queryParam;");
         assertContains(resources, "const headersParamValue = typeof headersParam === 'function' ? headersParam() : headersParam;");
         assertContains(resources, "return { url: `${BASE_PATH}/api/search/${queryParamPath}/${paramsParamValue}${query ? `?${query}` : ''}`, headers };");
