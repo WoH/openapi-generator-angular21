@@ -1,21 +1,30 @@
 {{>licenseInfo}}
 /**
  * Appends a query parameter as OpenAPI form/explode and Spring's data binding expect it: nothing for null or
- * undefined, arrays and sets as repeated keys, an object as one key per property and nested objects as dotted keys.
+ * undefined, arrays and sets as repeated keys, dates as ISO 8601, an object as one key per property and nested
+ * objects as dotted keys.
  */
-export function appendQueryParam(target: URLSearchParams, name: string, value: unknown, nested = false): void {
+export function appendQueryParam(target: URLSearchParams, name: string, value: unknown): void {
+    append(target, name, value, false);
+}
+
+function append(target: URLSearchParams, name: string, value: unknown, nested: boolean): void {
     if (value === undefined || value === null) {
         return;
     }
     if (Array.isArray(value) || value instanceof Set) {
         for (const item of value) {
-            target.append(name, String(item));
+            target.append(name, format(item));
         }
-    } else if (typeof value === 'object') {
+    } else if (typeof value === 'object' && !(value instanceof Date)) {
         for (const [key, entry] of Object.entries(value)) {
-            appendQueryParam(target, nested ? `${name}.${key}` : key, entry, true);
+            append(target, nested ? `${name}.${key}` : key, entry, true);
         }
     } else {
-        target.append(name, String(value));
+        target.append(name, format(value));
     }
+}
+
+function format(value: unknown): string {
+    return value instanceof Date ? value.toISOString() : String(value);
 }

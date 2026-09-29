@@ -22,6 +22,7 @@ assert.equal(query('page', undefined), '', 'undefined is left out');
 assert.equal(query('authorities', ['USER', 'TA']), 'authorities=USER&authorities=TA');
 assert.equal(query('teamIds', new Set([4, 5])), 'teamIds=4&teamIds=5');
 assert.equal(query('since', new Date(Date.UTC(2026, 8, 29, 12))), 'since=2026-09-29T12%3A00%3A00.000Z', 'a date is sent as ISO 8601');
+assert.equal(query('days', [new Date(Date.UTC(2026, 8, 29))]), 'days=2026-09-29T00%3A00%3A00.000Z', 'a date in an array is sent as ISO 8601');
 assert.equal(
     query('filter', { since: new Date(Date.UTC(2026, 8, 29, 12)) }),
     'since=2026-09-29T12%3A00%3A00.000Z',
