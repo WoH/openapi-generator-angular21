@@ -26,8 +26,8 @@ import java.util.*;
  * a clean, signal-based Angular client. It generates three types of files per API tag:</p>
  *
  * <ol>
- *   <li><b>API Service</b> ({@code *-api.ts}) &mdash; Injectable service with mutation methods (POST, PUT, DELETE)
- *       using {@code HttpClient} and the {@code inject()} function.</li>
+ *   <li><b>API Service</b> ({@code *-api.ts}) &mdash; Injectable service with an {@code Observable} method for every
+ *       operation, using {@code HttpClient} and the {@code inject()} function.</li>
  *   <li><b>API Resource</b> ({@code *-resources.ts}) &mdash; Signal-based {@code httpResource} wrappers
  *       for GET operations, enabling reactive data fetching. Only generated for tags that have GET operations.</li>
  *   <li><b>Model</b> ({@code *.ts}) &mdash; TypeScript interfaces with readonly properties,
@@ -42,7 +42,8 @@ import java.util.*;
  * <ol>
  *   <li>{@link #processOpts()} &mdash; Reads CLI options and registers mustache templates.</li>
  *   <li>{@link #processOpenAPI(OpenAPI)} &mdash; Scans paths to determine which tags need resource files.</li>
- *   <li>{@link #postProcessAllModels(Map)} &mdash; Marks models as readonly or mutable.</li>
+ *   <li>{@link #postProcessAllModels(Map)} &mdash; Marks models as readonly or mutable, and requires the properties
+ *       a subtype restates when its parent requires them.</li>
  *   <li>{@link #postProcessOperationsWithModels(OperationsMap, List)} &mdash; Builds the HttpClient calls,
  *       resource functions and URL templates, and collects imports.</li>
  * </ol>
@@ -90,12 +91,13 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
     /**
      * Initializes the Angular 22 generator with custom templates, naming conventions, and CLI options.
      *
-     * <p>Registers three template files:</p>
+     * <p>Registers the template files:</p>
      * <ul>
      *   <li>{@code model.mustache} &rarr; model TypeScript files</li>
      *   <li>{@code api-service.mustache} &rarr; API service files ({@code *-api.ts})</li>
      *   <li>{@code api-resource.mustache} &rarr; httpResource files ({@code *-resources.ts}),
      *       conditionally added in {@link #processOpts()}</li>
+     *   <li>{@code query-params.mustache} &rarr; {@code api/query-params.ts}, added in {@link #processOpts()}</li>
      * </ul>
      */
     public Angular22Generator() {
