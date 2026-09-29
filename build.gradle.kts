@@ -52,8 +52,18 @@ tasks.register<JavaExec>("generateExample") {
     )
 }
 
+val installTypeScript by tasks.registering(Exec::class) {
+    val typescriptDir = layout.projectDirectory.dir("src/test/typescript")
+    workingDir(typescriptDir)
+    commandLine("npm", "ci", "--no-audit", "--no-fund")
+    inputs.file(typescriptDir.file("package-lock.json"))
+    outputs.dir(typescriptDir.dir("node_modules"))
+}
+
 tasks.test {
     useJUnitPlatform()
+    // GeneratedCodeCompilesTest runs the pinned TypeScript compiler from src/test/typescript/node_modules.
+    dependsOn(installTypeScript)
 }
 
 // Register the generator with OpenAPI Generator's SPI
