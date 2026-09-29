@@ -5,10 +5,12 @@
  * @generated from OpenAPI specification
  */
 import { httpResource, HttpResourceRef } from '@angular/common/http';
+{{#operations.hasSignalArguments}}
 import { Signal } from '@angular/core';
-{{#tsImports}}
+{{/operations.hasSignalArguments}}
+{{#resourceTsImports}}
 import { {{classname}} } from '../model/{{filename}}';
-{{/tsImports}}
+{{/resourceTsImports}}
 {{#operations.hasResourceObjectQueryParams}}
 
 {{>queryObjectHelper}}

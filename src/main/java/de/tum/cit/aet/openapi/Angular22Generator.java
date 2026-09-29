@@ -489,21 +489,28 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
         operations.put("hasObjectQueryParams", hasObjectQueryParams(ops));
         operations.put("hasResourceObjectQueryParams", hasObjectQueryParams(getOperations));
 
-        // Step 6: Collect model imports and map to kebab-case file paths
+        operations.put("hasFileResponses", ops.stream().anyMatch(op -> op.isResponseFile));
+        operations.put("hasSignalArguments", getOperations.stream()
+                .anyMatch(op -> !op.pathParams.isEmpty() || !op.headerParams.isEmpty() || !op.queryParams.isEmpty()));
+
+        // Step 6: Collect model imports and map to kebab-case file paths. The resources file holds only the GETs, so
+        // it imports only their models; an unused import fails noUnusedLocals.
+        result.put("tsImports", toTsImports(ops));
+        result.put("resourceTsImports", toTsImports(getOperations));
+
+        return result;
+    }
+
+    private List<Map<String, String>> toTsImports(List<CodegenOperation> ops) {
         Set<String> modelImports = new LinkedHashSet<>();
         for (CodegenOperation op : ops) {
             modelImports.addAll(op.imports);
         }
         List<Map<String, String>> tsImports = new ArrayList<>();
         for (String im : modelImports) {
-            Map<String, String> tsImport = new HashMap<>();
-            tsImport.put("classname", im);
-            tsImport.put("filename", toModelFilename(im));
-            tsImports.add(tsImport);
+            tsImports.add(Map.of("classname", im, "filename", toModelFilename(im)));
         }
-        result.put("tsImports", tsImports);
-
-        return result;
+        return tsImports;
     }
 
     // =============================================================================================

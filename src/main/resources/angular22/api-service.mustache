@@ -4,13 +4,15 @@
  * @generated from OpenAPI specification
  */
 {{#operations.hasServiceClass}}
-import { HttpClient, HttpResponse } from '@angular/common/http';
+import { HttpClient{{#operations.hasFileResponses}}, HttpResponse{{/operations.hasFileResponses}} } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 {{/operations.hasServiceClass}}
 {{#operations.hasInlineResources}}
 import { httpResource, HttpResourceRef } from '@angular/common/http';
+{{#operations.hasSignalArguments}}
 import { Signal } from '@angular/core';
+{{/operations.hasSignalArguments}}
 {{/operations.hasInlineResources}}
 {{#tsImports}}
 import { {{classname}} } from '../model/{{filename}}';
