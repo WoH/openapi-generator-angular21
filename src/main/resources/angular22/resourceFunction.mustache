@@ -1,4 +1,4 @@
-{{#vendorExtensions.x-has-query-params}}
+{{#hasQueryParams}}
 /**
  * Query parameters for {{nickname}}
  */
@@ -8,7 +8,7 @@ export interface {{vendorExtensions.x-params-interface-name}} {
 {{/queryParams}}
 }
 
-{{/vendorExtensions.x-has-query-params}}
+{{/hasQueryParams}}
 /**
  * {{summary}}
  * {{notes}}
@@ -19,9 +19,9 @@ export interface {{vendorExtensions.x-params-interface-name}} {
 {{#headerParams}}
  * @param {{paramName}} {{description}}
 {{/headerParams}}
-{{#vendorExtensions.x-has-query-params}}
+{{#hasQueryParams}}
  * @param params Optional signal containing query parameters
-{{/vendorExtensions.x-has-query-params}}
+{{/hasQueryParams}}
  */
 export function {{nickname}}Resource({{{vendorExtensions.x-resource-params}}}): HttpResourceRef<{{#returnType}}{{{.}}}{{/returnType}}{{^returnType}}unknown{{/returnType}} | undefined> {
     return {{{vendorExtensions.x-resource-factory}}}(() => {
@@ -43,7 +43,7 @@ export function {{nickname}}Resource({{{vendorExtensions.x-resource-params}}}): 
         }
 {{/headerParams}}
 {{/hasHeaderParams}}
-{{#vendorExtensions.x-has-query-params}}
+{{#hasQueryParams}}
 {{#vendorExtensions.x-all-query-params-optional}}
         const queryParams = params?.() ?? {};
 {{/vendorExtensions.x-all-query-params-optional}}
@@ -55,7 +55,7 @@ export function {{nickname}}Resource({{{vendorExtensions.x-resource-params}}}): 
         appendQueryParam(searchParams, '{{baseName}}', queryParams.{{vendorExtensions.x-query-key}});
 {{/queryParams}}
         const query = searchParams.toString();
-{{/vendorExtensions.x-has-query-params}}
+{{/hasQueryParams}}
         return {{{vendorExtensions.x-resource-request}}};
     });
 }

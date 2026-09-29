@@ -78,9 +78,9 @@ const BASE_PATH = '{{contextPath}}';
 
 {{#operations}}
 {{#operation}}
-{{#vendorExtensions.x-inline-resource}}
+{{#vendorExtensions.x-is-get}}
 {{>resourceFunction}}
-{{/vendorExtensions.x-inline-resource}}
+{{/vendorExtensions.x-is-get}}
 {{/operation}}
 {{/operations}}
 {{/operations.hasInlineResources}}

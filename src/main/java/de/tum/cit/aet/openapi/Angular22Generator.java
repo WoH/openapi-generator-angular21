@@ -362,9 +362,9 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
      *
      * <p>Processing steps:</p>
      * <ol>
-     *   <li>Save original OpenAPI paths before the parent class URL-encodes them</li>
      *   <li>Per operation: annotate the path, query and form parameters, build the {@code HttpClient} call and the
-     *       URL template literal, and for a GET also the httpResource function</li>
+     *       URL template literal from the path as the spec writes it (the parent's {@code x-path-from-spec}), and for
+     *       a GET also the httpResource function</li>
      *   <li>Per file: set the flags that decide which imports and helpers the file needs, and map the referenced
      *       models to kebab-case file names</li>
      * </ol>
@@ -375,11 +375,6 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
      */
     @Override
     public OperationsMap postProcessOperationsWithModels(OperationsMap objs, List<ModelMap> allModels) {
-        Map<String, String> originalPaths = new HashMap<>();
-        for (CodegenOperation op : objs.getOperations().getOperation()) {
-            originalPaths.put(op.operationId, op.path);
-        }
-
         OperationsMap result = super.postProcessOperationsWithModels(objs, allModels);
 
         OperationMap operations = result.getOperations();
@@ -393,17 +388,12 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
             TypeScriptSnippets.processFormParameters(op);
             TypeScriptSnippets.buildHttpCall(op, response);
 
-            String originalPath = originalPaths.getOrDefault(op.operationId, op.path);
-            String pathTemplate = TypeScriptSnippets.buildPathTemplate(op, originalPath, false);
-            op.vendorExtensions.put("xPathTemplate", pathTemplate);
-            if (pathTemplate != null && !pathTemplate.isBlank()) {
-                op.path = pathTemplate;
-            }
+            String specPath = op.vendorExtensions.get("x-path-from-spec").toString();
+            op.vendorExtensions.put("xPathTemplate", TypeScriptSnippets.buildPathTemplate(op, specPath, false));
 
             if ("GET".equalsIgnoreCase(op.httpMethod)) {
                 op.vendorExtensions.put("x-is-get", true);
-                op.vendorExtensions.put("x-inline-resource", useHttpResource && !separateResources);
-                TypeScriptSnippets.buildResourceFunction(op, response, TypeScriptSnippets.buildPathTemplate(op, originalPath, true));
+                TypeScriptSnippets.buildResourceFunction(op, response, TypeScriptSnippets.buildPathTemplate(op, specPath, true));
                 getOperations.add(op);
             }
         }
@@ -441,7 +431,6 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
      *
      * <p>Sets vendor extensions on the operation:</p>
      * <ul>
-     *   <li>{@code x-has-query-params} &mdash; whether the operation has any query parameters</li>
      *   <li>{@code x-params-interface-name} &mdash; PascalCase interface name (e.g., {@code GetJobsParams})</li>
      *   <li>{@code x-all-query-params-optional} &mdash; whether the resource's {@code params} argument may be left out</li>
      * </ul>
@@ -454,7 +443,6 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
      * @param op the operation whose query parameters should be processed
      */
     private void processQueryParameters(CodegenOperation op) {
-        op.vendorExtensions.put("x-has-query-params", !op.queryParams.isEmpty());
         if (op.queryParams.isEmpty()) {
             return;
         }

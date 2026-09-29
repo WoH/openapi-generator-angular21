@@ -244,14 +244,9 @@ final class TypeScriptSnippets {
      * @param op             the operation being processed
      * @param originalPath   the raw OpenAPI path before URL encoding (e.g., {@code /api/jobs/{id}/pdf})
      * @param useSignalValue {@code true} for httpResource templates, {@code false} for HttpClient services
-     * @return the TypeScript template literal path (e.g., {@code /api/jobs/${idPath}/pdf}),
-     *         or {@code null} if {@code originalPath} is {@code null}
+     * @return the TypeScript template literal path (e.g., {@code /api/jobs/${idPath}/pdf})
      */
     static String buildPathTemplate(CodegenOperation op, String originalPath, boolean useSignalValue) {
-        if (originalPath == null) {
-            return null;
-        }
-
         String path = originalPath;
         for (CodegenParameter param : op.pathParams) {
             String name = param.paramName;
