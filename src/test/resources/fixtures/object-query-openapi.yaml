@@ -28,6 +28,15 @@ paths:
           required: false
           schema:
             type: boolean
+        - name: teamIds
+          in: query
+          required: false
+          schema:
+            type: array
+            uniqueItems: true
+            items:
+              type: integer
+              format: int64
       responses:
         '200':
           description: Scores of the matching participations
@@ -82,6 +91,12 @@ components:
           type: array
           items:
             type: string
+        exerciseIds:
+          type: array
+          uniqueItems: true
+          items:
+            type: integer
+            format: int64
         scoreRange:
           $ref: '#/components/schemas/ScoreRange'
     ScoreRange:
