@@ -21,6 +21,12 @@ assert.equal(query('page', null), '', 'null is left out');
 assert.equal(query('page', undefined), '', 'undefined is left out');
 assert.equal(query('authorities', ['USER', 'TA']), 'authorities=USER&authorities=TA');
 assert.equal(query('teamIds', new Set([4, 5])), 'teamIds=4&teamIds=5');
+assert.equal(query('since', new Date(Date.UTC(2026, 8, 29, 12))), 'since=2026-09-29T12%3A00%3A00.000Z', 'a date is sent as ISO 8601');
+assert.equal(
+    query('filter', { since: new Date(Date.UTC(2026, 8, 29, 12)) }),
+    'since=2026-09-29T12%3A00%3A00.000Z',
+    'a date inside an object is sent as ISO 8601',
+);
 assert.equal(
     query('search', { searchTerm: 'a b', page: 0, authorities: ['USER', 'TA'], exerciseIds: new Set([4, 5]), scoreRange: { lower: 0.5 }, sortedBy: null }),
     'searchTerm=a+b&page=0&authorities=USER&authorities=TA&exerciseIds=4&exerciseIds=5&scoreRange.lower=0.5',
