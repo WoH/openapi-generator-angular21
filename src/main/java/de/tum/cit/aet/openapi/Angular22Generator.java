@@ -369,11 +369,10 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
      * <p>Processing steps:</p>
      * <ol>
      *   <li>Save original OpenAPI paths before the parent class URL-encodes them</li>
-     *   <li>Split operations into GET (for httpResource) and mutation (for HttpClient) lists</li>
-     *   <li>Process path parameters &mdash; convert to camelCase, detect numeric types</li>
-     *   <li>Process query parameters &mdash; generate a TypeScript params interface name</li>
-     *   <li>Build TypeScript template literal URL paths from the original OpenAPI paths</li>
-     *   <li>Collect all referenced model imports and map them to kebab-case filenames</li>
+     *   <li>Per operation: annotate the path, query and form parameters, build the {@code HttpClient} call and the
+     *       URL template literal, and for a GET also the httpResource function</li>
+     *   <li>Per file: set the flags that decide which imports and helpers the file needs, and map the referenced
+     *       models to kebab-case file names</li>
      * </ol>
      *
      * @param objs      the operations map for the current API tag
@@ -382,10 +381,8 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
      */
     @Override
     public OperationsMap postProcessOperationsWithModels(OperationsMap objs, List<ModelMap> allModels) {
-        // Step 1: Save original paths before super transforms them
-        OperationMap operationsBefore = objs.getOperations();
         Map<String, String> originalPaths = new HashMap<>();
-        for (CodegenOperation op : operationsBefore.getOperation()) {
+        for (CodegenOperation op : objs.getOperations().getOperation()) {
             originalPaths.put(op.operationId, op.path);
         }
 
@@ -393,47 +390,27 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
 
         OperationMap operations = result.getOperations();
         List<CodegenOperation> ops = operations.getOperation();
-
-        // Step 2: Collect the GETs, which also get an httpResource
         List<CodegenOperation> getOperations = new ArrayList<>();
 
         for (CodegenOperation op : ops) {
-            boolean isGet = "GET".equalsIgnoreCase(op.httpMethod);
-            if (isGet) {
-                op.vendorExtensions.put("x-is-get", true);
-                op.vendorExtensions.put("x-inline-resource", useHttpResource && !separateResources);
-                getOperations.add(op);
-            }
-
-            // Non-JSON responses need an explicit Angular HttpClient responseType, for every HTTP method.
-            // Without it the client defaults to responseType 'json' and tries to JSON.parse text/binary
-            // payloads (e.g. iCalendar files, CSV exports, plain-text tokens, generated source code), which
-            // throws at runtime. A binary (Blob) return becomes responseType 'blob'; a string return whose
-            // produced media types are all text/* becomes responseType 'text'. JSON-string endpoints keep
-            // the default parser. File downloads (isResponseFile) are handled in buildHttpCall with
-            // observe: 'response' so callers get the HttpResponse headers.
-            if ("Blob".equals(op.returnType)) {
-                op.vendorExtensions.put("x-response-type", "blob");
-            } else if ("string".equals(op.returnType) && producesTextOnly(op)) {
-                op.vendorExtensions.put("x-response-type", "text");
-            }
-
-            // Step 3 & 4: Process parameters
+            ResponseKind response = ResponseKind.of(op);
             processPathParameters(op);
             processQueryParameters(op);
             processFormParameters(op);
-            buildHttpCall(op);
+            buildHttpCall(op, response);
 
-            // Step 5: Build TypeScript template literal URLs
             String originalPath = originalPaths.getOrDefault(op.operationId, op.path);
             String pathTemplate = buildPathTemplate(op, originalPath, false);
-            String resourcePathTemplate = buildPathTemplate(op, originalPath, true);
             op.vendorExtensions.put("xPathTemplate", pathTemplate);
             if (pathTemplate != null && !pathTemplate.isBlank()) {
                 op.path = pathTemplate;
             }
-            if (isGet) {
-                buildResourceFunction(op, resourcePathTemplate);
+
+            if ("GET".equalsIgnoreCase(op.httpMethod)) {
+                op.vendorExtensions.put("x-is-get", true);
+                op.vendorExtensions.put("x-inline-resource", useHttpResource && !separateResources);
+                buildResourceFunction(op, response, buildPathTemplate(op, originalPath, true));
+                getOperations.add(op);
             }
         }
 
@@ -442,13 +419,11 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
         // the separate resources file holds only the GETs.
         operations.put("hasQueryParams", ops.stream().anyMatch(op -> !op.queryParams.isEmpty()));
         operations.put("hasResourceQueryParams", getOperations.stream().anyMatch(op -> !op.queryParams.isEmpty()));
-
         operations.put("hasFileResponses", ops.stream().anyMatch(op -> op.isResponseFile));
         operations.put("hasSignalArguments", getOperations.stream()
                 .anyMatch(op -> !op.pathParams.isEmpty() || !op.headerParams.isEmpty() || !op.queryParams.isEmpty()));
 
-        // Step 6: Collect model imports and map to kebab-case file paths. The resources file holds only the GETs, so
-        // it imports only their models; an unused import fails noUnusedLocals.
+        // An unused import fails noUnusedLocals, so the resources file imports only the models of its GETs.
         result.put("tsImports", toTsImports(ops));
         result.put("resourceTsImports", toTsImports(getOperations));
 
@@ -493,34 +468,33 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
      * <ul>
      *   <li>{@code x-has-query-params} &mdash; whether the operation has any query parameters</li>
      *   <li>{@code x-params-interface-name} &mdash; PascalCase interface name (e.g., {@code GetJobsParams})</li>
+     *   <li>{@code x-all-query-params-optional} &mdash; whether the resource's {@code params} argument may be left out</li>
      * </ul>
      *
-     * <p>Sets vendor extensions on each query parameter:</p>
-     * <ul>
-     *   <li>{@code x-query-key} &mdash; the property name in the params interface. It is a key, not a variable, so
-     *       it keeps reserved words unescaped and never takes the {@code Param} suffix of {@link #toParamName}.</li>
-     * </ul>
+     * <p>Sets {@code x-query-key} on each query parameter: the property name in the params interface. It is a key,
+     * not a variable, so it keeps reserved words unescaped and never takes the {@code Param} suffix of
+     * {@link #toParamName}.</p>
      *
      * @param op the operation whose query parameters should be processed
      */
     private void processQueryParameters(CodegenOperation op) {
-        if (op.queryParams != null && !op.queryParams.isEmpty()) {
-            op.vendorExtensions.put("x-has-query-params", true);
-
-            String paramsInterfaceName = toPascalCase(op.operationId) + "Params";
-            op.vendorExtensions.put("x-params-interface-name", paramsInterfaceName);
-
-            boolean allOptional = true;
-            for (CodegenParameter param : op.queryParams) {
-                param.vendorExtensions.put("x-query-key", toCamelCase(super.toParamName(param.baseName)));
-                if (param.required) {
-                    allOptional = false;
-                }
-            }
-            op.vendorExtensions.put("x-all-query-params-optional", allOptional);
-        } else {
-            op.vendorExtensions.put("x-has-query-params", false);
+        op.vendorExtensions.put("x-has-query-params", !op.queryParams.isEmpty());
+        if (op.queryParams.isEmpty()) {
+            return;
         }
+        op.vendorExtensions.put("x-params-interface-name", paramsInterfaceName(op));
+        op.vendorExtensions.put("x-all-query-params-optional", allQueryParamsOptional(op));
+        for (CodegenParameter param : op.queryParams) {
+            param.vendorExtensions.put("x-query-key", toCamelCase(super.toParamName(param.baseName)));
+        }
+    }
+
+    private String paramsInterfaceName(CodegenOperation op) {
+        return toPascalCase(op.operationId) + "Params";
+    }
+
+    private static boolean allQueryParamsOptional(CodegenOperation op) {
+        return op.queryParams.stream().noneMatch(param -> param.required);
     }
 
     /**
@@ -536,9 +510,10 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
      *       {@code headers}, {@code responseType} and {@code observe}</li>
      * </ul>
      *
-     * @param op the operation whose HttpClient call should be built
+     * @param op       the operation whose HttpClient call should be built
+     * @param response how the response body is read
      */
-    private void buildHttpCall(CodegenOperation op) {
+    private void buildHttpCall(CodegenOperation op, ResponseKind response) {
         String payload = null;
         if (op.getHasFormParams()) {
             payload = "formData";
@@ -562,28 +537,26 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
         if (op.getHasHeaderParams()) {
             options.add("headers");
         }
-
-        Object responseType = op.vendorExtensions.get("x-response-type");
-        if (op.isResponseFile) {
-            options.add("responseType: 'blob'");
-            options.add("observe: 'response'");
-        } else if (responseType != null) {
-            options.add("responseType: '" + responseType + "'");
-        }
+        options.addAll(switch (response) {
+            case JSON -> List.<String>of();
+            case TEXT -> List.of("responseType: 'text'");
+            case BLOB -> List.of("responseType: 'blob'");
+            case FILE -> List.of("responseType: 'blob'", "observe: 'response'");
+        });
         if (!options.isEmpty()) {
             args.add("{ " + String.join(", ", options) + " }");
         }
 
         // The text and blob overloads return Observable<string> / Observable<Blob> (or HttpResponse<Blob>) and
         // take no type argument; the JSON overload is generic in the parsed body.
-        boolean jsonResponse = !op.isResponseFile && responseType == null;
-        String typeArg = jsonResponse ? "<" + (op.returnType != null ? op.returnType : "void") + ">" : "";
-        op.vendorExtensions.put("x-http-type-arg", typeArg);
+        String returnType = op.returnType != null ? op.returnType : "void";
+        op.vendorExtensions.put("x-http-type-arg", response == ResponseKind.JSON ? "<" + returnType + ">" : "");
         op.vendorExtensions.put("x-http-args", String.join(", ", args));
     }
 
     /**
-     * Builds the parameter list and the request expression of a GET operation's httpResource function.
+     * Builds the parameter list, the httpResource factory and the request expression of a GET operation's
+     * httpResource function.
      *
      * <p>Sets vendor extensions on the operation:</p>
      * <ul>
@@ -591,14 +564,17 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
      *       value), then the query {@code params} signal. An argument is marked optional ({@code ?}) only when
      *       every argument after it is optional too; an optional argument before a required one accepts
      *       {@code undefined} instead.</li>
+     *   <li>{@code x-resource-factory} &mdash; {@code httpResource<T>} for JSON, {@code httpResource.text} or
+     *       {@code httpResource.blob} otherwise</li>
      *   <li>{@code x-resource-request} &mdash; what the request function returns: the URL template literal, or
      *       {@code { url: ..., headers }} when the operation declares header parameters</li>
      * </ul>
      *
      * @param op                   the GET operation
+     * @param response             how the response body is read
      * @param resourcePathTemplate the URL path with {@code ${...}} placeholders for the resource template
      */
-    private void buildResourceFunction(CodegenOperation op, String resourcePathTemplate) {
+    private void buildResourceFunction(CodegenOperation op, ResponseKind response, String resourcePathTemplate) {
         List<ResourceArg> args = new ArrayList<>();
         for (CodegenParameter param : op.pathParams) {
             args.add(new ResourceArg(param.paramName, signalOrValue(param.dataType), false));
@@ -606,10 +582,9 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
         for (CodegenParameter param : op.headerParams) {
             args.add(new ResourceArg(param.paramName, signalOrValue(param.dataType), !param.required));
         }
-        boolean hasQueryParams = Boolean.TRUE.equals(op.vendorExtensions.get("x-has-query-params"));
+        boolean hasQueryParams = !op.queryParams.isEmpty();
         if (hasQueryParams) {
-            args.add(new ResourceArg("params", "Signal<" + op.vendorExtensions.get("x-params-interface-name") + ">",
-                    Boolean.TRUE.equals(op.vendorExtensions.get("x-all-query-params-optional"))));
+            args.add(new ResourceArg("params", "Signal<" + paramsInterfaceName(op) + ">", allQueryParamsOptional(op)));
         }
 
         LinkedList<String> rendered = new LinkedList<>();
@@ -625,12 +600,47 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
         }
         op.vendorExtensions.put("x-resource-params", String.join(", ", rendered));
 
+        op.vendorExtensions.put("x-resource-factory", switch (response) {
+            case JSON -> "httpResource<" + (op.returnType != null ? op.returnType : "unknown") + ">";
+            case TEXT -> "httpResource.text";
+            case BLOB, FILE -> "httpResource.blob";
+        });
+
         String url = "`${BASE_PATH}" + resourcePathTemplate + (hasQueryParams ? "${query ? `?${query}` : ''}" : "") + "`";
         op.vendorExtensions.put("x-resource-request", op.getHasHeaderParams() ? "{ url: " + url + ", headers }" : url);
     }
 
     /** One argument of a generated httpResource function. */
     private record ResourceArg(String name, String type, boolean optional) {
+    }
+
+    /**
+     * How {@code HttpClient} and {@code httpResource} must read a response body. Without an explicit
+     * {@code responseType} the client parses JSON and throws on text or binary payloads (iCalendar files, CSV
+     * exports, plain-text tokens, generated source code).
+     */
+    private enum ResponseKind {
+        /** Parsed as JSON into the return type, including JSON-string endpoints. */
+        JSON,
+        /** A string return whose produced media types are all {@code text/*}. */
+        TEXT,
+        /** A binary ({@code Blob}) return. */
+        BLOB,
+        /** A file download; the service method returns the {@code HttpResponse} so callers get its headers. */
+        FILE;
+
+        static ResponseKind of(CodegenOperation op) {
+            if (op.isResponseFile) {
+                return FILE;
+            }
+            if ("Blob".equals(op.returnType)) {
+                return BLOB;
+            }
+            if ("string".equals(op.returnType) && producesTextOnly(op)) {
+                return TEXT;
+            }
+            return JSON;
+        }
     }
 
     private static String signalOrValue(String dataType) {
@@ -706,7 +716,7 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
         if (op.pathParams != null) {
             for (CodegenParameter param : op.pathParams) {
                 String name = param.paramName;
-                boolean isNumeric = Boolean.TRUE.equals(param.vendorExtensions.get("x-is-numeric"));
+                boolean isNumeric = isNumericParam(param);
 
                 String valueVar;
                 if (useSignalValue) {
@@ -809,7 +819,7 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
      * @param param the codegen parameter to check
      * @return {@code true} if the parameter is numeric, {@code false} otherwise
      */
-    private boolean isNumericParam(CodegenParameter param) {
+    private static boolean isNumericParam(CodegenParameter param) {
         if (Boolean.TRUE.equals(param.isInteger) || Boolean.TRUE.equals(param.isNumber)) {
             return true;
         }
@@ -821,7 +831,7 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
      * Used to emit responseType: 'text' for string-returning operations; JSON-string endpoints (which produce
      * application/json) return false and keep the default JSON parser.
      */
-    private boolean producesTextOnly(CodegenOperation op) {
+    private static boolean producesTextOnly(CodegenOperation op) {
         if (op.produces == null || op.produces.isEmpty()) {
             return false;
         }

@@ -24,7 +24,7 @@ export interface {{vendorExtensions.x-params-interface-name}} {
 {{/vendorExtensions.x-has-query-params}}
  */
 export function {{nickname}}Resource({{{vendorExtensions.x-resource-params}}}): HttpResourceRef<{{#returnType}}{{{.}}}{{/returnType}}{{^returnType}}unknown{{/returnType}} | undefined> {
-    return httpResource{{#vendorExtensions.x-response-type}}.{{vendorExtensions.x-response-type}}{{/vendorExtensions.x-response-type}}{{^vendorExtensions.x-response-type}}<{{#returnType}}{{{.}}}{{/returnType}}{{^returnType}}unknown{{/returnType}}>{{/vendorExtensions.x-response-type}}(() => {
+    return {{{vendorExtensions.x-resource-factory}}}(() => {
 {{#pathParams}}
         const {{paramName}}Value = typeof {{paramName}} === 'function' ? {{paramName}}() : {{paramName}};
         if ({{paramName}}Value === undefined) {
