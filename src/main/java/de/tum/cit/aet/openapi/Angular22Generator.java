@@ -446,10 +446,10 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
      *   <li>{@code x-all-query-params-optional} &mdash; whether the resource's {@code params} argument may be left out</li>
      * </ul>
      *
-     * <p>Sets {@code x-query-key} on each query parameter: the property name in the params interface, the camelCase
-     * of the parent's identifier for the wire name. The camelCase drops the {@code _} that escapes a reserved word,
-     * since a property may have that name, and the key never takes the {@code Param} suffix of
-     * {@link #toParamName}.</p>
+     * <p>Sets {@code x-query-key} on each query parameter: the property name in the params interface. It is the
+     * parent's identifier for the wire name without the {@code _} that escapes a reserved word, since a property may
+     * have that name, and without the {@code Param} suffix of {@link #toParamName}. A digit suffix keeps it unique
+     * within the operation, as the parent does for identifiers.</p>
      *
      * @param op the operation whose query parameters should be processed
      */
@@ -460,8 +460,15 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
         }
         op.vendorExtensions.put("x-params-interface-name", TypeScriptSnippets.paramsInterfaceName(op));
         op.vendorExtensions.put("x-all-query-params-optional", TypeScriptSnippets.allQueryParamsOptional(op));
+        Set<String> keys = new HashSet<>();
         for (CodegenParameter param : op.queryParams) {
-            param.vendorExtensions.put("x-query-key", Names.toCamelCase(super.toParamName(param.baseName)));
+            String identifier = super.toParamName(param.baseName);
+            String key = identifier.startsWith("_") && isReservedWord(identifier.substring(1)) ? identifier.substring(1) : identifier;
+            String uniqueKey = key;
+            for (int suffix = 2; !keys.add(uniqueKey); suffix++) {
+                uniqueKey = key + suffix;
+            }
+            param.vendorExtensions.put("x-query-key", uniqueKey);
         }
     }
 
