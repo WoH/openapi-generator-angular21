@@ -251,7 +251,7 @@ class Angular22GeneratorTest {
     }
 
     @Test
-    void leavesPropertiesOfTheParentInterfaceToExtends() throws IOException {
+    void requiresPropertiesThatTheParentRequires() throws IOException {
         generateFixture("fixtures/subtype-openapi.yaml", Map.of());
 
         assertContains(Files.readString(tempDir.resolve("model/exercise.ts")), """
@@ -259,9 +259,10 @@ class Angular22GeneratorTest {
                     readonly type: string;
                 }
                 """);
-        // Redeclaring the required discriminator as optional would not compile (TS2430); extends already brings it.
+        // Redeclaring the required discriminator as optional would not compile (TS2430).
         assertContains(Files.readString(tempDir.resolve("model/text-exercise.ts")), """
                 export interface TextExercise extends Exercise {
+                    readonly type: string;
                     readonly name?: string;
                 }
                 """);

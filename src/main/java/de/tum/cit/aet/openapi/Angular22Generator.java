@@ -310,7 +310,7 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
         for (ModelsMap modelsMap : result.values()) {
             for (ModelMap modelMap : modelsMap.getModels()) {
                 CodegenModel model = modelMap.getModel();
-                omitInheritedProperties(model);
+                requireWhatAncestorsRequire(model);
 
                 boolean isInputDto = model.name.endsWith("Create") ||
                         model.name.endsWith("Update") ||
@@ -328,30 +328,30 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
     }
 
     /**
-     * Removes the properties that an ancestor interface already declares from a subtype's {@code vars}.
+     * Makes a subtype's property required when an ancestor interface requires it.
      *
      * <p>A schema built as {@code allOf: [{$ref: Parent}, {properties: {...}}]} becomes an interface that
-     * {@code extends Parent}. When the inline part repeats a parent property (typically the discriminator), the
-     * child would redeclare it, often with different optionality ({@code type?: string} against the parent's
-     * {@code type: string}), which TypeScript rejects (TS2430). The child inherits the property through
-     * {@code extends}, so it is left out.</p>
+     * {@code extends Parent}. When the inline part restates a required parent property without requiring it
+     * (typically the discriminator), the child would declare {@code type?: string} against the parent's
+     * {@code type: string}, which TypeScript rejects (TS2430). A required redeclaration is compatible, and a
+     * redeclaration that narrows the type keeps its narrower type.</p>
      *
-     * @param model the model to clean up; models without a parent stay unchanged
+     * @param model the model to adjust; models without a parent stay unchanged
      */
-    private static void omitInheritedProperties(CodegenModel model) {
-        Set<String> inherited = new HashSet<>();
-        // CodegenModel.hashCode walks the whole model graph, so track visited ancestors by identity.
-        Set<CodegenModel> visited = Collections.newSetFromMap(new IdentityHashMap<>());
-        for (CodegenModel ancestor = model.parentModel; ancestor != null && visited.add(ancestor); ancestor = ancestor.parentModel) {
+    private static void requireWhatAncestorsRequire(CodegenModel model) {
+        Set<String> required = new HashSet<>();
+        for (CodegenModel ancestor = model.parentModel; ancestor != null; ancestor = ancestor.parentModel) {
             for (CodegenProperty property : ancestor.vars) {
-                inherited.add(property.baseName);
+                if (property.required) {
+                    required.add(property.baseName);
+                }
             }
         }
-        if (inherited.isEmpty()) {
-            return;
+        for (CodegenProperty property : model.vars) {
+            if (required.contains(property.baseName)) {
+                property.required = true;
+            }
         }
-        model.vars.removeIf(property -> inherited.contains(property.baseName));
-        model.hasEnums = model.vars.stream().anyMatch(property -> property.isEnum);
     }
 
     // =============================================================================================
