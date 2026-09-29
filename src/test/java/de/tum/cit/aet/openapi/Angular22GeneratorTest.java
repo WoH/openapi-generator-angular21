@@ -193,7 +193,8 @@ class Angular22GeneratorTest {
         assertContains(api, "formData.append('formData', String(formDataParam));");
 
         String resources = Files.readString(tempDir.resolve("api/link-resources.ts"));
-        assertContains(resources, "searchParams.set('url', String(queryParams.urlParam));");
+        // Query parameters are properties of the params object, which never collide with a local.
+        assertContains(resources, "searchParams.set('url', String(queryParams.url));");
         assertContains(resources, "export function searchResource(queryParam: Signal<string | undefined> | string, paramsParam: Signal<number | undefined> | number, headersParam?: Signal<string | undefined> | string, params?: Signal<SearchParams>)");
         assertContains(resources, "const queryParamValue = typeof queryParam === 'function' ? queryParam() : queryParam;");
         assertContains(resources, "const headersParamValue = typeof headersParam === 'function' ? headersParam() : headersParam;");

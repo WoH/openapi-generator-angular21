@@ -4,7 +4,7 @@
  */
 export interface {{vendorExtensions.x-params-interface-name}} {
 {{#queryParams}}
-    {{vendorExtensions.x-ts-name}}{{^required}}?{{/required}}: {{{dataType}}};
+    {{vendorExtensions.x-query-key}}{{^required}}?{{/required}}: {{{dataType}}};
 {{/queryParams}}
 }
 
@@ -14,10 +14,10 @@ export interface {{vendorExtensions.x-params-interface-name}} {
  * {{notes}}
  * Creates a reactive HTTP resource that automatically refetches when signals change.
 {{#pathParams}}
- * @param {{vendorExtensions.x-ts-name}} {{description}}
+ * @param {{paramName}} {{description}}
 {{/pathParams}}
 {{#headerParams}}
- * @param {{vendorExtensions.x-ts-name}} {{description}}
+ * @param {{paramName}} {{description}}
 {{/headerParams}}
 {{#vendorExtensions.x-has-query-params}}
  * @param params Optional signal containing query parameters
@@ -26,20 +26,20 @@ export interface {{vendorExtensions.x-params-interface-name}} {
 export function {{nickname}}Resource({{{vendorExtensions.x-resource-params}}}): HttpResourceRef<{{#returnType}}{{{.}}}{{/returnType}}{{^returnType}}unknown{{/returnType}} | undefined> {
     return httpResource{{#vendorExtensions.x-response-type}}.{{vendorExtensions.x-response-type}}{{/vendorExtensions.x-response-type}}{{^vendorExtensions.x-response-type}}<{{#returnType}}{{{.}}}{{/returnType}}{{^returnType}}unknown{{/returnType}}>{{/vendorExtensions.x-response-type}}(() => {
 {{#pathParams}}
-        const {{vendorExtensions.x-ts-name}}Value = typeof {{vendorExtensions.x-ts-name}} === 'function' ? {{vendorExtensions.x-ts-name}}() : {{vendorExtensions.x-ts-name}};
-        if ({{vendorExtensions.x-ts-name}}Value === undefined) {
+        const {{paramName}}Value = typeof {{paramName}} === 'function' ? {{paramName}}() : {{paramName}};
+        if ({{paramName}}Value === undefined) {
             return undefined;
         }
 {{^vendorExtensions.x-is-numeric}}
-        const {{vendorExtensions.x-ts-name}}Path = encodeURIComponent(String({{vendorExtensions.x-ts-name}}Value));
+        const {{paramName}}Path = encodeURIComponent(String({{paramName}}Value));
 {{/vendorExtensions.x-is-numeric}}
 {{/pathParams}}
 {{#hasHeaderParams}}
         const headers: Record<string, string> = {};
 {{#headerParams}}
-        const {{vendorExtensions.x-ts-name}}Value = typeof {{vendorExtensions.x-ts-name}} === 'function' ? {{vendorExtensions.x-ts-name}}() : {{vendorExtensions.x-ts-name}};
-        if ({{vendorExtensions.x-ts-name}}Value !== undefined && {{vendorExtensions.x-ts-name}}Value !== null) {
-            headers['{{baseName}}'] = String({{vendorExtensions.x-ts-name}}Value);
+        const {{paramName}}Value = typeof {{paramName}} === 'function' ? {{paramName}}() : {{paramName}};
+        if ({{paramName}}Value !== undefined && {{paramName}}Value !== null) {
+            headers['{{baseName}}'] = String({{paramName}}Value);
         }
 {{/headerParams}}
 {{/hasHeaderParams}}
@@ -53,23 +53,23 @@ export function {{nickname}}Resource({{{vendorExtensions.x-resource-params}}}): 
         const searchParams = new URLSearchParams();
 {{#queryParams}}
 {{#isArray}}
-        if (queryParams.{{vendorExtensions.x-ts-name}}?.length) {
-            queryParams.{{vendorExtensions.x-ts-name}}.forEach(value => searchParams.append('{{baseName}}', String(value)));
+        if (queryParams.{{vendorExtensions.x-query-key}}?.length) {
+            queryParams.{{vendorExtensions.x-query-key}}.forEach(value => searchParams.append('{{baseName}}', String(value)));
         }
 {{/isArray}}
 {{^isArray}}
 {{#isBoolean}}
-        if (queryParams.{{vendorExtensions.x-ts-name}} !== undefined) {
-            searchParams.set('{{baseName}}', String(queryParams.{{vendorExtensions.x-ts-name}}));
+        if (queryParams.{{vendorExtensions.x-query-key}} !== undefined) {
+            searchParams.set('{{baseName}}', String(queryParams.{{vendorExtensions.x-query-key}}));
         }
 {{/isBoolean}}
 {{^isBoolean}}
-        if (queryParams.{{vendorExtensions.x-ts-name}} !== undefined && queryParams.{{vendorExtensions.x-ts-name}} !== null) {
+        if (queryParams.{{vendorExtensions.x-query-key}} !== undefined && queryParams.{{vendorExtensions.x-query-key}} !== null) {
 {{#vendorExtensions.x-query-object}}
-            appendQueryObject(searchParams, queryParams.{{vendorExtensions.x-ts-name}});
+            appendQueryObject(searchParams, queryParams.{{vendorExtensions.x-query-key}});
 {{/vendorExtensions.x-query-object}}
 {{^vendorExtensions.x-query-object}}
-            searchParams.set('{{baseName}}', String(queryParams.{{vendorExtensions.x-ts-name}}));
+            searchParams.set('{{baseName}}', String(queryParams.{{vendorExtensions.x-query-key}}));
 {{/vendorExtensions.x-query-object}}
         }
 {{/isBoolean}}

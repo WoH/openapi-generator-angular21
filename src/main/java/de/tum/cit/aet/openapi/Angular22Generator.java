@@ -60,13 +60,9 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
     /** TypeScript types that {@code String()} turns into a form field value without losing information. */
     private static final Set<String> TS_SCALAR_TYPES = Set.of("string", "number", "boolean");
 
-    /** Local variables that every generated service method may declare next to its parameters. */
-    private static final Set<String> SERVICE_LOCALS = Set.of("url", "queryParams", "queryString", "formData", "headers");
-    /**
-     * Identifiers that a generated resource function declares next to its path and header arguments. Query
-     * parameters are properties of the {@code params} object there and cannot collide.
-     */
-    private static final Set<String> RESOURCE_LOCALS = Set.of("searchParams", "query", "params", "queryParams");
+    /** Identifiers that a generated service method or resource function declares next to its parameters. */
+    private static final Set<String> TEMPLATE_LOCALS =
+            Set.of("url", "queryParams", "queryString", "formData", "headers", "searchParams", "query", "params");
     /** An ASCII identifier, which TypeScript accepts as a property name without quotes. */
     private static final Pattern IDENTIFIER = Pattern.compile("[A-Za-z_$][A-Za-z0-9_$]*");
 
@@ -419,10 +415,8 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
             }
 
             // Step 3 & 4: Process parameters
-            renameParametersCollidingWithLocals(op);
             processPathParameters(op);
             processQueryParameters(op);
-            processHeaderParameters(op);
             processFormParameters(op);
             buildHttpCall(op);
 
@@ -474,51 +468,14 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
     // =============================================================================================
 
     /**
-     * Appends {@code Param} to TypeScript parameter names that the generated code also declares as local
-     * variables (e.g. a query parameter {@code url} next to {@code const url = ...}), which would otherwise be a
-     * duplicate identifier. Only {@code paramName} changes; the wire name ({@code baseName}) stays. Runs before
-     * the path, query, header and form processing so every derived name uses the new one.
-     *
-     * @param op the operation whose parameters should be checked
-     */
-    private void renameParametersCollidingWithLocals(CodegenOperation op) {
-        // The parameter lists hold copies of each parameter, so every list is renamed. The rule depends only on the
-        // name and location, and a renamed name never collides again, so a parameter seen twice is renamed once.
-        List<CodegenParameter> params = new ArrayList<>();
-        for (List<CodegenParameter> list : Arrays.asList(op.allParams, op.bodyParams, op.pathParams, op.queryParams,
-                op.headerParams, op.formParams, op.cookieParams, op.requiredParams, op.optionalParams,
-                op.requiredAndNotNullableParams, op.notNullableParams)) {
-            if (list != null) {
-                params.addAll(list);
-            }
-        }
-        if (op.bodyParam != null) {
-            params.add(op.bodyParam);
-        }
-        for (CodegenParameter param : params) {
-            boolean resourceIdentifier = param.isPathParam || param.isHeaderParam;
-            if (SERVICE_LOCALS.contains(param.paramName) || (resourceIdentifier && RESOURCE_LOCALS.contains(param.paramName))) {
-                param.paramName = param.paramName + "Param";
-            }
-        }
-    }
-
-    /**
-     * Processes path parameters for a single operation: converts parameter names to camelCase
-     * for TypeScript and detects numeric parameters (which don't need URI encoding).
-     *
-     * <p>Sets vendor extensions on each parameter:</p>
-     * <ul>
-     *   <li>{@code x-ts-name} &mdash; the camelCase TypeScript variable name</li>
-     *   <li>{@code x-is-numeric} &mdash; whether the parameter is a number type</li>
-     * </ul>
+     * Processes path parameters for a single operation: sets {@code x-is-numeric} on each parameter, since numeric
+     * parameters don't need URI encoding.
      *
      * @param op the operation whose path parameters should be processed
      */
     private void processPathParameters(CodegenOperation op) {
         if (op.pathParams != null) {
             for (CodegenParameter param : op.pathParams) {
-                param.vendorExtensions.put("x-ts-name", toCamelCase(param.paramName));
                 param.vendorExtensions.put("x-is-numeric", isNumericParam(param));
             }
         }
@@ -526,7 +483,7 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
 
     /**
      * Processes query parameters for a single operation: generates a TypeScript interface name
-     * for the grouped query params and converts individual parameter names to camelCase.
+     * for the grouped query params and the property name of each parameter in it.
      *
      * <p>Sets vendor extensions on the operation:</p>
      * <ul>
@@ -534,7 +491,12 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
      *   <li>{@code x-params-interface-name} &mdash; PascalCase interface name (e.g., {@code GetJobsParams})</li>
      * </ul>
      *
-     * <p>Sets {@code x-query-object} on each query parameter, see {@link #isQueryObject(CodegenParameter)}.</p>
+     * <p>Sets vendor extensions on each query parameter:</p>
+     * <ul>
+     *   <li>{@code x-query-key} &mdash; the property name in the params interface. It is a key, not a variable, so
+     *       it keeps reserved words unescaped and never takes the {@code Param} suffix of {@link #toParamName}.</li>
+     *   <li>{@code x-query-object} &mdash; see {@link #isQueryObject(CodegenParameter)}</li>
+     * </ul>
      *
      * @param op the operation whose query parameters should be processed
      */
@@ -547,7 +509,7 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
 
             boolean allOptional = true;
             for (CodegenParameter param : op.queryParams) {
-                param.vendorExtensions.put("x-ts-name", toCamelCase(param.paramName));
+                param.vendorExtensions.put("x-query-key", toCamelCase(super.toParamName(param.baseName)));
                 param.vendorExtensions.put("x-query-object", isQueryObject(param));
                 if (param.required) {
                     allOptional = false;
@@ -645,20 +607,6 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
     }
 
     /**
-     * Processes header parameters for a single operation: sets the camelCase TypeScript variable name
-     * ({@code x-ts-name}) that the resource template uses for the header argument.
-     *
-     * @param op the operation whose header parameters should be processed
-     */
-    private void processHeaderParameters(CodegenOperation op) {
-        if (op.headerParams != null) {
-            for (CodegenParameter param : op.headerParams) {
-                param.vendorExtensions.put("x-ts-name", toCamelCase(param.paramName));
-            }
-        }
-    }
-
-    /**
      * Builds the parameter list and the request expression of a GET operation's httpResource function.
      *
      * <p>Sets vendor extensions on the operation:</p>
@@ -677,10 +625,10 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
     private void buildResourceFunction(CodegenOperation op, String resourcePathTemplate) {
         List<ResourceArg> args = new ArrayList<>();
         for (CodegenParameter param : op.pathParams) {
-            args.add(new ResourceArg(param.vendorExtensions.get("x-ts-name").toString(), signalOrValue(param.dataType), false));
+            args.add(new ResourceArg(param.paramName, signalOrValue(param.dataType), false));
         }
         for (CodegenParameter param : op.headerParams) {
-            args.add(new ResourceArg(param.vendorExtensions.get("x-ts-name").toString(), signalOrValue(param.dataType), !param.required));
+            args.add(new ResourceArg(param.paramName, signalOrValue(param.dataType), !param.required));
         }
         boolean hasQueryParams = Boolean.TRUE.equals(op.vendorExtensions.get("x-has-query-params"));
         if (hasQueryParams) {
@@ -781,15 +729,14 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
 
         if (op.pathParams != null) {
             for (CodegenParameter param : op.pathParams) {
-                Object tsName = param.vendorExtensions.get("x-ts-name");
-                String baseName = tsName != null ? tsName.toString() : param.paramName;
+                String name = param.paramName;
                 boolean isNumeric = Boolean.TRUE.equals(param.vendorExtensions.get("x-is-numeric"));
 
                 String valueVar;
                 if (useSignalValue) {
-                    valueVar = isNumeric ? baseName + "Value" : baseName + "Path";
+                    valueVar = isNumeric ? name + "Value" : name + "Path";
                 } else {
-                    valueVar = isNumeric ? baseName : baseName + "Path";
+                    valueVar = isNumeric ? name : name + "Path";
                 }
 
                 String placeholder = "{" + param.baseName + "}";
@@ -839,6 +786,22 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
     @Override
     public String toApiName(String name) {
         return StringUtils.camelize(name) + "Api";
+    }
+
+    /**
+     * Returns the TypeScript identifier of a parameter. On top of the parent's escaping of reserved words, a name that
+     * the generated method bodies declare as a local variable (e.g. a query parameter {@code url} next to
+     * {@code const url = ...}) gets the suffix {@code Param}. The parent names every parameter here before it copies
+     * the parameter into the operation's lists, so every copy carries the same name; the wire name ({@code baseName})
+     * stays.
+     *
+     * @param name the parameter name in the OpenAPI document
+     * @return the identifier used for the parameter in the generated code
+     */
+    @Override
+    public String toParamName(String name) {
+        String identifier = super.toParamName(name);
+        return TEMPLATE_LOCALS.contains(identifier) ? identifier + "Param" : identifier;
     }
 
     /**
