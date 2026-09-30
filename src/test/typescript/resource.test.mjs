@@ -48,3 +48,8 @@ assert.deepEqual(
     { url: '/api/quoted', headers: {} },
     'an optional header that is not known yet is left out',
 );
+
+const shapes = [new Set(['blue', 'black']), ['blue', 'black'], { R: '100', G: '200' }, { R: '100', G: '200' }];
+const simpleStyle = [['X-Set', 'blue,black'], ['X-Array', 'blue,black'], ['X-Object', 'R,100,G,200'], ['X-Exploded', 'R=100,G=200']];
+assert.deepEqual(Object.entries(generated.readHeaderShapesResource(...shapes)().headers), simpleStyle, 'a resource sends collections and objects in simple style');
+assert.deepEqual(Object.entries(api.readHeaderShapes(...shapes).headers), simpleStyle, 'the service sends collections and objects in simple style');

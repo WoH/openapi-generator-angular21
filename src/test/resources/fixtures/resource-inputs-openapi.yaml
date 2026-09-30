@@ -82,3 +82,46 @@ paths:
             application/json:
               schema:
                 type: string
+  /api/header-shapes:
+    get:
+      tags:
+        - review
+      operationId: readHeaderShapes
+      parameters:
+        - name: X-Set
+          in: header
+          required: true
+          schema:
+            type: array
+            uniqueItems: true
+            items:
+              type: string
+        - name: X-Array
+          in: header
+          required: true
+          schema:
+            type: array
+            items:
+              type: string
+        - name: X-Object
+          in: header
+          required: true
+          schema:
+            type: object
+            additionalProperties:
+              type: string
+        - name: X-Exploded
+          in: header
+          required: true
+          explode: true
+          schema:
+            type: object
+            additionalProperties:
+              type: string
+      responses:
+        '200':
+          description: The header shapes
+          content:
+            application/json:
+              schema:
+                type: string
