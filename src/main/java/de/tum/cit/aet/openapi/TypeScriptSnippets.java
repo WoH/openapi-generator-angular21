@@ -4,6 +4,7 @@
  */
 package de.tum.cit.aet.openapi;
 
+import com.fasterxml.jackson.core.io.JsonStringEncoder;
 import org.openapitools.codegen.CodegenOperation;
 import org.openapitools.codegen.CodegenParameter;
 
@@ -216,7 +217,7 @@ final class TypeScriptSnippets {
     static void processFormParameters(CodegenOperation op) {
         for (CodegenParameter param : op.formParams) {
             String name = param.paramName;
-            String key = "'" + param.baseName + "'";
+            String key = stringLiteral(param.baseName);
             String statement;
             if (param.isArray) {
                 statement = isBinaryType(param.items != null ? param.items.dataType : null)
@@ -319,10 +320,19 @@ final class TypeScriptSnippets {
      * @return the key to print in the interface
      */
     static String toPropertyKey(String jsonKey) {
-        if (IDENTIFIER.matcher(jsonKey).matches()) {
-            return jsonKey;
-        }
-        return "'" + jsonKey.replace("\\", "\\\\").replace("'", "\\'") + "'";
+        return IDENTIFIER.matcher(jsonKey).matches() ? jsonKey : stringLiteral(jsonKey);
+    }
+
+    /**
+     * Returns a single-quoted TypeScript string literal for a string from the spec, such as a wire name. Jackson's JSON
+     * string encoder escapes backslashes, double quotes and control characters the way a TypeScript string literal
+     * reads them; the apostrophe that would end the literal is escaped on top.
+     *
+     * @param value the string as the spec writes it
+     * @return the quoted literal, e.g. {@code 'it\'s'}
+     */
+    private static String stringLiteral(String value) {
+        return "'" + new String(JsonStringEncoder.getInstance().quoteAsString(value)).replace("'", "\\'") + "'";
     }
 
     private TypeScriptSnippets() {
