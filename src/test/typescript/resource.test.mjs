@@ -41,3 +41,10 @@ const quoted = { url: "/api/quoted?it%27s=a&back%5Cslash=b", headers: { "X-It's"
 assert.deepEqual(generated.readQuotedResource('h', () => ({ its: 'a', backSlash: 'b' }))(), quoted, 'a resource keeps each wire name');
 assert.deepEqual(api.readQuoted('h', 'a', 'b'), quoted, 'the service keeps each wire name');
 assert.doesNotThrow(() => new Headers(quoted.headers), 'the expected header name is a valid HTTP header name');
+
+assert.equal(generated.readReviewsResource(() => undefined, 'second')(), undefined, 'a required header that is not known yet keeps the resource idle');
+assert.deepEqual(
+    generated.readQuotedResource(() => undefined)(),
+    { url: '/api/quoted', headers: {} },
+    'an optional header that is not known yet is left out',
+);
