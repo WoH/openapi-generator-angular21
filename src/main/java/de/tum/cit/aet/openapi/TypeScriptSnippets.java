@@ -9,6 +9,8 @@ import org.openapitools.codegen.CodegenOperation;
 import org.openapitools.codegen.CodegenParameter;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
@@ -59,14 +61,75 @@ final class TypeScriptSnippets {
 
     /**
      * Processes path parameters for a single operation: sets {@code x-is-numeric} on each parameter, since numeric
-     * parameters don't need URI encoding.
+     * parameters don't need URI encoding, and the names of its locals ({@code x-value-name}, {@code x-path-name}).
      *
-     * @param op the operation whose path parameters should be processed
+     * @param op     the operation whose path parameters should be processed
+     * @param locals the names from {@link #allocateLocals}
      */
-    static void processPathParameters(CodegenOperation op) {
+    static void processPathParameters(CodegenOperation op, Map<String, Locals> locals) {
         for (CodegenParameter param : op.pathParams) {
             param.vendorExtensions.put("x-is-numeric", isNumericParam(param));
+            param.vendorExtensions.put("x-value-name", locals.get(param.paramName).value());
+            param.vendorExtensions.put("x-path-name", locals.get(param.paramName).path());
         }
+    }
+
+    /**
+     * Processes header parameters for a single operation: sets {@code x-value-name}, the resource local that holds the
+     * unwrapped value, on each parameter.
+     *
+     * @param op     the operation whose header parameters should be processed
+     * @param locals the names from {@link #allocateLocals}
+     */
+    static void processHeaderParameters(CodegenOperation op, Map<String, Locals> locals) {
+        for (CodegenParameter param : op.headerParams) {
+            param.vendorExtensions.put("x-value-name", locals.get(param.paramName).value());
+        }
+    }
+
+    /**
+     * The locals that a generated body derives from a path or header parameter: {@code value} holds the unwrapped
+     * signal in a resource, and {@code path} the URI-encoded value of a string path parameter ({@code null} for any
+     * other parameter).
+     */
+    record Locals(String value, String path) {
+    }
+
+    /**
+     * Names the locals that the generated bodies derive from path and header parameters. One set of used names covers
+     * the operation's service method and resource function: it starts with the identifiers that the templates fix and
+     * every argument name, and a derived name whose preferred form is taken gets a digit suffix. So a derived local
+     * never hides an argument or another local, while ordinary inputs keep {@code <name>Value} and {@code <name>Path}.
+     *
+     * @param op               the operation
+     * @param fixedIdentifiers the identifiers that the templates declare or call
+     * @return the locals of each path and header parameter, by parameter name
+     */
+    static Map<String, Locals> allocateLocals(CodegenOperation op, Set<String> fixedIdentifiers) {
+        Set<String> used = new HashSet<>(fixedIdentifiers);
+        op.allParams.forEach(param -> used.add(param.paramName));
+        Map<String, Locals> locals = new HashMap<>();
+        for (CodegenParameter param : op.pathParams) {
+            String value = allocate(used, param.paramName + "Value");
+            String path = isNumericParam(param) ? null : allocate(used, param.paramName + "Path");
+            locals.put(param.paramName, new Locals(value, path));
+        }
+        for (CodegenParameter param : op.headerParams) {
+            locals.put(param.paramName, new Locals(allocate(used, param.paramName + "Value"), null));
+        }
+        return locals;
+    }
+
+    /**
+     * Returns the preferred name, or the preferred name with the lowest digit suffix from 2 on, that is not yet in
+     * {@code used}, and adds it.
+     */
+    static String allocate(Set<String> used, String preferred) {
+        String name = preferred;
+        for (int suffix = 2; !used.add(name); suffix++) {
+            name = preferred + suffix;
+        }
+        return name;
     }
 
     static String paramsInterfaceName(CodegenOperation op) {
@@ -246,31 +309,25 @@ final class TypeScriptSnippets {
      * Builds a TypeScript template literal URL from the original OpenAPI path by replacing
      * {@code {paramName}} placeholders with {@code ${variable}} expressions.
      *
-     * <p>The variable naming depends on the context:</p>
-     * <ul>
-     *   <li><b>Service methods</b> ({@code useSignalValue=false}): string params use
-     *       {@code paramPath} (URI-encoded via {@code encodeURIComponent}), numeric params
-     *       use the raw variable name.</li>
-     *   <li><b>httpResource methods</b> ({@code useSignalValue=true}): string params use
-     *       {@code paramPath}, numeric params use {@code paramValue} (unwrapped from signals).</li>
-     * </ul>
+     * <p>A string parameter uses its URI-encoded path local in both contexts. A numeric parameter uses the argument in
+     * a service method ({@code useSignalValue=false}) and its value local, unwrapped from the signal, in an httpResource
+     * function ({@code useSignalValue=true}).</p>
      *
      * @param op             the operation being processed
      * @param originalPath   the raw OpenAPI path before URL encoding (e.g., {@code /api/jobs/{id}/pdf})
      * @param useSignalValue {@code true} for httpResource templates, {@code false} for HttpClient services
+     * @param locals         the names from {@link #allocateLocals}
      * @return the TypeScript template literal path (e.g., {@code /api/jobs/${idPath}/pdf})
      */
-    static String buildPathTemplate(CodegenOperation op, String originalPath, boolean useSignalValue) {
+    static String buildPathTemplate(CodegenOperation op, String originalPath, boolean useSignalValue, Map<String, Locals> locals) {
         String path = originalPath;
         for (CodegenParameter param : op.pathParams) {
-            String name = param.paramName;
-            boolean isNumeric = isNumericParam(param);
-
+            Locals names = locals.get(param.paramName);
             String valueVar;
-            if (useSignalValue) {
-                valueVar = isNumeric ? name + "Value" : name + "Path";
+            if (names.path() != null) {
+                valueVar = names.path();
             } else {
-                valueVar = isNumeric ? name : name + "Path";
+                valueVar = useSignalValue ? names.value() : param.paramName;
             }
 
             String placeholder = "{" + param.baseName + "}";

@@ -20,7 +20,7 @@ class TemplateIdentifiersTest {
     private static final Pattern IMPORT = Pattern.compile("^import \\{(.*)\\} from", Pattern.MULTILINE);
 
     @Test
-    void renamesParametersNamedLikeAnIdentifierOfTheGeneratedBodies() throws IOException {
+    void renamesParametersNamedLikeAFixedIdentifierOfTheGeneratedBodies() throws IOException {
         Set<String> identifiers = new TreeSet<>();
         for (String template : new String[] {"api-service.mustache", "api-resource.mustache", "resourceFunction.mustache"}) {
             String source = Files.readString(TEMPLATES.resolve(template)).replaceAll("\\{\\{[^}]*}}", "");

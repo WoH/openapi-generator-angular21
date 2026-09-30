@@ -26,20 +26,20 @@ export interface {{vendorExtensions.x-params-interface-name}} {
 export function {{nickname}}Resource({{{vendorExtensions.x-resource-params}}}): HttpResourceRef<{{{vendorExtensions.x-resource-type}}} | undefined> {
     return {{{vendorExtensions.x-resource-factory}}}(() => {
 {{#pathParams}}
-        const {{paramName}}Value = typeof {{paramName}} === 'function' ? {{paramName}}() : {{paramName}};
-        if ({{paramName}}Value === undefined) {
+        const {{vendorExtensions.x-value-name}} = typeof {{paramName}} === 'function' ? {{paramName}}() : {{paramName}};
+        if ({{vendorExtensions.x-value-name}} === undefined) {
             return undefined;
         }
 {{^vendorExtensions.x-is-numeric}}
-        const {{paramName}}Path = encodeURIComponent(String({{paramName}}Value));
+        const {{vendorExtensions.x-path-name}} = encodeURIComponent(String({{vendorExtensions.x-value-name}}));
 {{/vendorExtensions.x-is-numeric}}
 {{/pathParams}}
 {{#hasHeaderParams}}
         const headers: Record<string, string> = {};
 {{#headerParams}}
-        const {{paramName}}Value = typeof {{paramName}} === 'function' ? {{paramName}}() : {{paramName}};
-        if ({{paramName}}Value !== undefined && {{paramName}}Value !== null) {
-            headers['{{baseName}}'] = String({{paramName}}Value);
+        const {{vendorExtensions.x-value-name}} = typeof {{paramName}} === 'function' ? {{paramName}}() : {{paramName}};
+        if ({{vendorExtensions.x-value-name}} !== undefined && {{vendorExtensions.x-value-name}} !== null) {
+            headers['{{baseName}}'] = String({{vendorExtensions.x-value-name}});
         }
 {{/headerParams}}
 {{/hasHeaderParams}}

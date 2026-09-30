@@ -385,17 +385,19 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
 
         for (CodegenOperation op : ops) {
             TypeScriptSnippets.ResponseKind response = TypeScriptSnippets.ResponseKind.of(op);
-            TypeScriptSnippets.processPathParameters(op);
+            Map<String, TypeScriptSnippets.Locals> locals = TypeScriptSnippets.allocateLocals(op, TEMPLATE_LOCALS);
+            TypeScriptSnippets.processPathParameters(op, locals);
+            TypeScriptSnippets.processHeaderParameters(op, locals);
             processQueryParameters(op);
             TypeScriptSnippets.processFormParameters(op);
             TypeScriptSnippets.buildHttpCall(op, response);
 
             String specPath = op.vendorExtensions.get("x-path-from-spec").toString();
-            op.vendorExtensions.put("xPathTemplate", TypeScriptSnippets.buildPathTemplate(op, specPath, false));
+            op.vendorExtensions.put("xPathTemplate", TypeScriptSnippets.buildPathTemplate(op, specPath, false, locals));
 
             if ("GET".equalsIgnoreCase(op.httpMethod)) {
                 op.vendorExtensions.put("x-is-get", true);
-                TypeScriptSnippets.buildResourceFunction(op, response, TypeScriptSnippets.buildPathTemplate(op, specPath, true));
+                TypeScriptSnippets.buildResourceFunction(op, response, TypeScriptSnippets.buildPathTemplate(op, specPath, true, locals));
                 getOperations.add(op);
             }
         }
@@ -455,11 +457,7 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
         for (CodegenParameter param : op.queryParams) {
             String identifier = super.toParamName(param.baseName);
             String key = identifier.startsWith("_") && isReservedWord(identifier.substring(1)) ? identifier.substring(1) : identifier;
-            String uniqueKey = key;
-            for (int suffix = 2; !keys.add(uniqueKey); suffix++) {
-                uniqueKey = key + suffix;
-            }
-            param.vendorExtensions.put("x-query-key", uniqueKey);
+            param.vendorExtensions.put("x-query-key", TypeScriptSnippets.allocate(keys, key));
         }
     }
 
