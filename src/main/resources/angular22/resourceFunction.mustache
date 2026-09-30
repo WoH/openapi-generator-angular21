@@ -44,7 +44,7 @@ export function {{nickname}}Resource({{{vendorExtensions.x-resource-params}}}): 
         }
 {{/required}}
         if ({{vendorExtensions.x-value-name}} !== undefined && {{vendorExtensions.x-value-name}} !== null) {
-            headers[{{{vendorExtensions.x-wire-name-literal}}}] = String({{vendorExtensions.x-value-name}});
+            headers[{{{vendorExtensions.x-wire-name-literal}}}] = {{{vendorExtensions.x-resource-header-value}}};
         }
 {{/headerParams}}
 {{/hasHeaderParams}}

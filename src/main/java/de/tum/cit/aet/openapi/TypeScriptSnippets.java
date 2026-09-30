@@ -76,7 +76,8 @@ final class TypeScriptSnippets {
 
     /**
      * Processes header parameters for a single operation: sets {@code x-value-name}, the resource local that holds the
-     * unwrapped value, and {@code x-wire-name-literal}, the header name as a TypeScript string literal, on each
+     * unwrapped value, {@code x-wire-name-literal}, the header name as a TypeScript string literal, and the value
+     * expressions of the service ({@code x-header-value}) and the resource ({@code x-resource-header-value}) on each
      * parameter.
      *
      * @param op     the operation whose header parameters should be processed
@@ -86,7 +87,26 @@ final class TypeScriptSnippets {
         for (CodegenParameter param : op.headerParams) {
             param.vendorExtensions.put("x-value-name", locals.get(param.paramName).value());
             param.vendorExtensions.put("x-wire-name-literal", stringLiteral(param.baseName));
+            param.vendorExtensions.put("x-header-value", headerValue(param, param.paramName));
+            param.vendorExtensions.put("x-resource-header-value", headerValue(param, locals.get(param.paramName).value()));
         }
+    }
+
+    /**
+     * Returns the expression that serializes a header value in OpenAPI's default simple style: a collection as its
+     * items joined with commas, an object as its keys and values joined with commas ({@code R,100,G,200}, or
+     * {@code R=100,G=200} with {@code explode}), and anything else with {@code String()}.
+     */
+    private static String headerValue(CodegenParameter param, String value) {
+        if (param.isArray) {
+            return "Array.from(" + value + ").join(',')";
+        }
+        if (param.isMap || param.isModel || param.isFreeFormObject) {
+            return param.isExplode
+                    ? "Object.entries(" + value + ").map(([key, entry]) => `${key}=${entry}`).join(',')"
+                    : "Object.entries(" + value + ").flat().join(',')";
+        }
+        return "String(" + value + ")";
     }
 
     /**

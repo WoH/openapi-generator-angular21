@@ -54,7 +54,7 @@ export class {{classname}} {
         const headers: Record<string, string> = {};
 {{#headerParams}}
         if ({{paramName}} !== undefined && {{paramName}} !== null) {
-            headers[{{{vendorExtensions.x-wire-name-literal}}}] = String({{paramName}});
+            headers[{{{vendorExtensions.x-wire-name-literal}}}] = {{{vendorExtensions.x-header-value}}};
         }
 {{/headerParams}}
 {{/hasHeaderParams}}
