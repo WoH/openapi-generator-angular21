@@ -205,10 +205,11 @@ final class TypeScriptSnippets {
      * Computes the {@code FormData.append} statement for each multipart field and stores it in the
      * {@code x-form-append} vendor extension.
      *
-     * <p>{@code FormData} only accepts strings and Blobs. Binary fields are appended as they are (an array of
-     * binaries as one part per item), scalars and enums are converted with {@code String()}, and everything
-     * else (objects, arrays of objects, maps) goes out as a single {@code application/json} part, which is
-     * what Spring's {@code @RequestPart} expects for a DTO.</p>
+     * <p>{@code FormData} only accepts strings and Blobs. The collection shape decides first: an array or set of
+     * binaries goes out as one part per item, and any other array or set as one {@code application/json} array part.
+     * Of the other fields, a binary is appended as it is, a scalar or enum is converted with {@code String()}, and
+     * everything else (objects, maps) goes out as one {@code application/json} part, which is what Spring's
+     * {@code @RequestPart} expects for a DTO.</p>
      *
      * @param op the operation whose form parameters should be processed
      */
@@ -217,17 +218,23 @@ final class TypeScriptSnippets {
             String name = param.paramName;
             String key = "'" + param.baseName + "'";
             String statement;
-            if (isBinaryType(param.dataType)) {
+            if (param.isArray) {
+                statement = isBinaryType(param.items != null ? param.items.dataType : null)
+                        ? name + ".forEach(item => formData.append(" + key + ", item));"
+                        : appendJsonPart(key, "Array.from(" + name + ")");
+            } else if (isBinaryType(param.dataType)) {
                 statement = "formData.append(" + key + ", " + name + ");";
-            } else if (param.isArray && isBinaryType(param.items != null ? param.items.dataType : null)) {
-                statement = name + ".forEach(item => formData.append(" + key + ", item));";
             } else if (param.isEnum || param.isEnumRef || TS_SCALAR_TYPES.contains(param.dataType)) {
                 statement = "formData.append(" + key + ", String(" + name + "));";
             } else {
-                statement = "formData.append(" + key + ", new Blob([JSON.stringify(" + name + ")], { type: 'application/json' }));";
+                statement = appendJsonPart(key, name);
             }
             param.vendorExtensions.put("x-form-append", statement);
         }
+    }
+
+    private static String appendJsonPart(String key, String value) {
+        return "formData.append(" + key + ", new Blob([JSON.stringify(" + value + ")], { type: 'application/json' }));";
     }
 
     private static boolean isBinaryType(String dataType) {

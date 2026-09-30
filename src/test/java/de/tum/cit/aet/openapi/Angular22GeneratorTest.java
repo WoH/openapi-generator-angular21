@@ -85,7 +85,7 @@ class Angular22GeneratorTest {
                             formData.append('course', new Blob([JSON.stringify(course)], { type: 'application/json' }));
                         }
                 """);
-        assertContains(api, "formData.append('pages', new Blob([JSON.stringify(pages)], { type: 'application/json' }));");
+        assertContains(api, "formData.append('pages', new Blob([JSON.stringify(Array.from(pages))], { type: 'application/json' }));");
         assertContains(api, "formData.append('labels', new Blob([JSON.stringify(labels)], { type: 'application/json' }));");
         // Binary fields are appended as they are.
         assertContains(api, "formData.append('file', file);");
