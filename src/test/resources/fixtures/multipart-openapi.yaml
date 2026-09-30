@@ -48,6 +48,27 @@ paths:
                   type: object
                   additionalProperties:
                     type: string
+                tags:
+                  type: array
+                  uniqueItems: true
+                  items:
+                    type: string
+                sections:
+                  type: array
+                  uniqueItems: true
+                  items:
+                    $ref: '#/components/schemas/Page'
+                modes:
+                  type: array
+                  items:
+                    type: string
+                    enum:
+                      - DRAFT
+                      - FINAL
+                modeRefs:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/UploadMode'
       responses:
         '200':
           description: Created course
