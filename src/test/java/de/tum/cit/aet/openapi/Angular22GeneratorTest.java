@@ -153,6 +153,9 @@ class Angular22GeneratorTest {
         assertContains(resources, """
                         const headers: Record<string, string> = {};
                         const authorizationValue = typeof authorization === 'function' ? authorization() : authorization;
+                        if (authorizationValue === undefined) {
+                            return undefined;
+                        }
                         if (authorizationValue !== undefined && authorizationValue !== null) {
                             headers['Authorization'] = String(authorizationValue);
                         }
