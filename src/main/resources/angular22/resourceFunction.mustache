@@ -35,7 +35,8 @@ export function {{nickname}}Resource({{{vendorExtensions.x-resource-params}}}): 
 {{/vendorExtensions.x-is-numeric}}
 {{/pathParams}}
 {{#hasHeaderParams}}
-        const headers: Record<string, string> = {};
+{{! Without a prototype, every wire name becomes an own entry; on {} a header named __proto__ would hit the setter. }}
+        const headers: Record<string, string> = Object.create(null);
 {{#headerParams}}
         const {{vendorExtensions.x-value-name}} = typeof {{paramName}} === 'function' ? {{paramName}}() : {{paramName}};
 {{#required}}

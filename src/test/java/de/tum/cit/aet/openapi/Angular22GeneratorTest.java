@@ -133,7 +133,7 @@ class Angular22GeneratorTest {
         String api = Files.readString(tempDir.resolve("api/repository-api.ts"));
         assertContains(api, """
                         const url = `${this.basePath}/api/exercises/${exerciseId}/repository${queryString ? `?${queryString}` : ''}`;
-                        const headers: Record<string, string> = {};
+                        const headers: Record<string, string> = Object.create(null);
                         if (authorization !== undefined && authorization !== null) {
                             headers['Authorization'] = String(authorization);
                         }
@@ -151,7 +151,7 @@ class Angular22GeneratorTest {
         // every later argument is optional too.
         assertContains(resources, "export function getRepositoryResource(exerciseId: Signal<number | undefined> | number, authorization: Signal<string | undefined> | string, xTraceId?: Signal<string | undefined> | string, params?: Signal<GetRepositoryParams>): HttpResourceRef<RepositoryFiles | undefined>");
         assertContains(resources, """
-                        const headers: Record<string, string> = {};
+                        const headers: Record<string, string> = Object.create(null);
                         const authorizationValue = typeof authorization === 'function' ? authorization() : authorization;
                         if (authorizationValue === undefined) {
                             return undefined;

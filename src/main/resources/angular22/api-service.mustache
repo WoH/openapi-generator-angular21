@@ -51,7 +51,8 @@ export class {{classname}} {
         const url = `${this.basePath}{{{vendorExtensions.xPathTemplate}}}`;
 {{/hasQueryParams}}
 {{#hasHeaderParams}}
-        const headers: Record<string, string> = {};
+{{! Without a prototype, every wire name becomes an own entry; on {} a header named __proto__ would hit the setter. }}
+        const headers: Record<string, string> = Object.create(null);
 {{#headerParams}}
         if ({{paramName}} !== undefined && {{paramName}} !== null) {
             headers[{{{vendorExtensions.x-wire-name-literal}}}] = {{{vendorExtensions.x-header-value}}};
