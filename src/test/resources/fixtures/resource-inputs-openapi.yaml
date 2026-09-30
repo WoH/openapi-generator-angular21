@@ -125,3 +125,21 @@ paths:
             application/json:
               schema:
                 type: string
+  /api/proto:
+    get:
+      tags:
+        - review
+      operationId: readProto
+      parameters:
+        - name: __proto__
+          in: header
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The header named __proto__
+          content:
+            application/json:
+              schema:
+                type: string
