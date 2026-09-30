@@ -39,7 +39,7 @@ export function {{nickname}}Resource({{{vendorExtensions.x-resource-params}}}): 
 {{#headerParams}}
         const {{vendorExtensions.x-value-name}} = typeof {{paramName}} === 'function' ? {{paramName}}() : {{paramName}};
         if ({{vendorExtensions.x-value-name}} !== undefined && {{vendorExtensions.x-value-name}} !== null) {
-            headers['{{baseName}}'] = String({{vendorExtensions.x-value-name}});
+            headers[{{{vendorExtensions.x-wire-name-literal}}}] = String({{vendorExtensions.x-value-name}});
         }
 {{/headerParams}}
 {{/hasHeaderParams}}
@@ -52,7 +52,7 @@ export function {{nickname}}Resource({{{vendorExtensions.x-resource-params}}}): 
 {{/vendorExtensions.x-all-query-params-optional}}
         const searchParams = new URLSearchParams();
 {{#queryParams}}
-        appendQueryParam(searchParams, '{{baseName}}', queryParams.{{vendorExtensions.x-query-key}});
+        appendQueryParam(searchParams, {{{vendorExtensions.x-wire-name-literal}}}, queryParams.{{vendorExtensions.x-query-key}});
 {{/queryParams}}
         const query = searchParams.toString();
 {{/hasQueryParams}}

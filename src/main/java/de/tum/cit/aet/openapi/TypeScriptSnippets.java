@@ -76,7 +76,8 @@ final class TypeScriptSnippets {
 
     /**
      * Processes header parameters for a single operation: sets {@code x-value-name}, the resource local that holds the
-     * unwrapped value, on each parameter.
+     * unwrapped value, and {@code x-wire-name-literal}, the header name as a TypeScript string literal, on each
+     * parameter.
      *
      * @param op     the operation whose header parameters should be processed
      * @param locals the names from {@link #allocateLocals}
@@ -84,6 +85,7 @@ final class TypeScriptSnippets {
     static void processHeaderParameters(CodegenOperation op, Map<String, Locals> locals) {
         for (CodegenParameter param : op.headerParams) {
             param.vendorExtensions.put("x-value-name", locals.get(param.paramName).value());
+            param.vendorExtensions.put("x-wire-name-literal", stringLiteral(param.baseName));
         }
     }
 
@@ -388,7 +390,7 @@ final class TypeScriptSnippets {
      * @param value the string as the spec writes it
      * @return the quoted literal, e.g. {@code 'it\'s'}
      */
-    private static String stringLiteral(String value) {
+    static String stringLiteral(String value) {
         return "'" + new String(JsonStringEncoder.getInstance().quoteAsString(value)).replace("'", "\\'") + "'";
     }
 

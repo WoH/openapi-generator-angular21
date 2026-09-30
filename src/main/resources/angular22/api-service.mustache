@@ -42,7 +42,7 @@ export class {{classname}} {
 {{#hasQueryParams}}
         const queryParams = new URLSearchParams();
 {{#queryParams}}
-        appendQueryParam(queryParams, '{{baseName}}', {{paramName}});
+        appendQueryParam(queryParams, {{{vendorExtensions.x-wire-name-literal}}}, {{paramName}});
 {{/queryParams}}
         const queryString = queryParams.toString();
         const url = `${this.basePath}{{{vendorExtensions.xPathTemplate}}}${queryString ? `?${queryString}` : ''}`;
@@ -54,7 +54,7 @@ export class {{classname}} {
         const headers: Record<string, string> = {};
 {{#headerParams}}
         if ({{paramName}} !== undefined && {{paramName}} !== null) {
-            headers['{{baseName}}'] = String({{paramName}});
+            headers[{{{vendorExtensions.x-wire-name-literal}}}] = String({{paramName}});
         }
 {{/headerParams}}
 {{/hasHeaderParams}}

@@ -443,7 +443,8 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
      * <p>Sets {@code x-query-key} on each query parameter: the property name in the params interface. It is the
      * parent's identifier for the wire name without the {@code _} that escapes a reserved word, since a property may
      * have that name, and without the {@code Param} suffix of {@link #toParamName}. A digit suffix keeps it unique
-     * within the operation, as the parent does for identifiers.</p>
+     * within the operation, as the parent does for identifiers. {@code x-wire-name-literal} is the wire name as a
+     * TypeScript string literal.</p>
      *
      * @param op the operation whose query parameters should be processed
      */
@@ -458,6 +459,7 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
             String identifier = super.toParamName(param.baseName);
             String key = identifier.startsWith("_") && isReservedWord(identifier.substring(1)) ? identifier.substring(1) : identifier;
             param.vendorExtensions.put("x-query-key", TypeScriptSnippets.allocate(keys, key));
+            param.vendorExtensions.put("x-wire-name-literal", TypeScriptSnippets.stringLiteral(param.baseName));
         }
     }
 
