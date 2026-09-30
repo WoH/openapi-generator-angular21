@@ -69,6 +69,8 @@ paths:
                   type: array
                   items:
                     $ref: '#/components/schemas/UploadMode'
+                "it's":
+                  type: string
       responses:
         '200':
           description: Created course

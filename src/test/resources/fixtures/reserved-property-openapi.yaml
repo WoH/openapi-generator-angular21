@@ -44,3 +44,14 @@ components:
           type: string
         score:
           type: number
+    Escapes:
+      type: object
+      properties:
+        "it's":
+          type: string
+        "back\\slash":
+          type: string
+        "line\nbreak":
+          type: string
+        "tab\tand \"quote\"":
+          type: string

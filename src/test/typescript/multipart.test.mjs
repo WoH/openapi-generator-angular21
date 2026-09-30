@@ -27,6 +27,7 @@ const form = new exports.UploadApi().createUpload(
     new Set([{ number: 2 }]),
     ['DRAFT', 'FINAL'],
     ['FINAL'],
+    'quoted',
 );
 
 const parts = {};
@@ -50,3 +51,4 @@ assert.deepEqual(parts.tags, json('["x","y"]'), 'a set is sent as a JSON array')
 assert.deepEqual(parts.sections, json('[{"number":2}]'), 'a set of objects is sent as a JSON array');
 assert.deepEqual(parts.modes, json('["DRAFT","FINAL"]'), 'an array of enum values is sent as a JSON array');
 assert.deepEqual(parts.modeRefs, json('["FINAL"]'));
+assert.deepEqual(parts["it's"], ['quoted'], 'a field name with an apostrophe keeps its name');

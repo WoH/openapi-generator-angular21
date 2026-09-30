@@ -254,6 +254,15 @@ class Angular22GeneratorTest {
     }
 
     @Test
+    void quotesPropertyKeysThatAreNotIdentifiers() throws IOException, InterruptedException {
+        generateFixture("fixtures/reserved-property-openapi.yaml", Map.of());
+
+        NodeProcess.assertSucceeds(Path.of("src/test/typescript"), "A property key does not parse back to its JSON key",
+                "model-keys.test.mjs", tempDir.resolve("model/escapes.ts").toString(), "Escapes",
+                "it's", "back\\slash", "line\nbreak", "tab\tand \"quote\"");
+    }
+
+    @Test
     void writesInlineModelsToTheFileTheirImportsName() throws IOException {
         generateFixture("fixtures/inline-model-openapi.yaml", Map.of());
 
