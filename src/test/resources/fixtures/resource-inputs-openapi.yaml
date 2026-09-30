@@ -54,3 +54,31 @@ paths:
             application/json:
               schema:
                 type: string
+  /api/quoted:
+    get:
+      tags:
+        - review
+      operationId: readQuoted
+      parameters:
+        - name: "X-It's"
+          in: header
+          required: false
+          schema:
+            type: string
+        - name: "it's"
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: "back\\slash"
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The quoted names
+          content:
+            application/json:
+              schema:
+                type: string

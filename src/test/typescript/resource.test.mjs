@@ -10,13 +10,16 @@ function load(file, modules) {
     return exports;
 }
 
-const file = process.argv[2];
+const [resourcesFile, serviceFile] = process.argv.slice(2);
 const request = (callback) => callback;
-const generated = load(file, {
+const http = { get: (url, options) => ({ url, ...options }) };
+const angular = (file) => ({
     '@angular/common/http': { httpResource: Object.assign(request, { text: request, blob: request }), HttpClient: class {} },
-    '@angular/core': { inject: () => ({}), Injectable: () => (target) => target },
+    '@angular/core': { inject: () => http, Injectable: () => (target) => target },
     './query-params': load(join(dirname(file), 'query-params.ts'), {}),
 });
+const generated = load(resourcesFile, angular(resourcesFile));
+const api = new (load(serviceFile, angular(serviceFile)).ReviewApi)();
 
 assert.deepEqual(
     generated.readReviewsResource('first', 'second')(),
@@ -28,3 +31,13 @@ assert.deepEqual(
     { url: '/api/reviews/path-value?tokenPath=query-value', headers: { tokenValue: 'header-value' } },
     'path, header and query arguments keep their own values',
 );
+assert.deepEqual(
+    api.readReview('path-value', 'header-value', 'query-value'),
+    { url: '/api/reviews/path-value?tokenPath=query-value', headers: { tokenValue: 'header-value' } },
+    'the service keeps the value of each argument',
+);
+
+const quoted = { url: "/api/quoted?it%27s=a&back%5Cslash=b", headers: { "X-It's": 'h' } };
+assert.deepEqual(generated.readQuotedResource('h', () => ({ its: 'a', backSlash: 'b' }))(), quoted, 'a resource keeps each wire name');
+assert.deepEqual(api.readQuoted('h', 'a', 'b'), quoted, 'the service keeps each wire name');
+assert.doesNotThrow(() => new Headers(quoted.headers), 'the expected header name is a valid HTTP header name');

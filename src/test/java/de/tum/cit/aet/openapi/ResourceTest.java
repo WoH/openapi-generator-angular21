@@ -19,10 +19,13 @@ class ResourceTest {
         generate(tempDir.resolve("resources"), Map.of());
         generate(tempDir.resolve("inline"), Map.of("separateResources", "false"));
 
-        for (Path file : new Path[] {tempDir.resolve("resources/api/review-resources.ts"), tempDir.resolve("inline/api/review-api.ts")}) {
-            NodeProcess.assertSucceeds(Path.of("src/test/typescript"), "A resource built the wrong request from " + file.getFileName(),
-                    "resource.test.mjs", file.toString());
-        }
+        assertBuildsTheRequests(tempDir.resolve("resources/api/review-resources.ts"), tempDir.resolve("resources/api/review-api.ts"));
+        assertBuildsTheRequests(tempDir.resolve("inline/api/review-api.ts"), tempDir.resolve("inline/api/review-api.ts"));
+    }
+
+    private static void assertBuildsTheRequests(Path resources, Path service) throws IOException, InterruptedException {
+        NodeProcess.assertSucceeds(Path.of("src/test/typescript"), "A generated function built the wrong request from " + resources,
+                "resource.test.mjs", resources.toString(), service.toString());
     }
 
     private static void generate(Path outputDir, Map<String, String> additionalProperties) {
