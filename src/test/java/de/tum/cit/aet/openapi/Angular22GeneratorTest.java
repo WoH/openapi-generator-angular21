@@ -306,6 +306,16 @@ class Angular22GeneratorTest {
     }
 
     @Test
+    void typesUniqueItemsArraysAsArrays() throws IOException {
+        generateFixture("fixtures/object-query-openapi.yaml", Map.of());
+
+        // JSON has no sets: JSON.parse returns an array, and JSON.stringify, which Angular uses for request bodies,
+        // turns a Set into {} wherever it sits.
+        assertContains(Files.readString(tempDir.resolve("api/score-api.ts")), "teamIds?: Array<number>");
+        assertContains(Files.readString(tempDir.resolve("model/participation-score-search.ts")), "readonly exerciseIds?: Array<number>;");
+    }
+
+    @Test
     void passesEveryQueryParameterToTheQueryHelper() throws IOException {
         generateFixture("fixtures/object-query-openapi.yaml", Map.of());
 
