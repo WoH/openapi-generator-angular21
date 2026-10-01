@@ -237,6 +237,10 @@ java -cp openapi-generator-angular22-1.0.0.jar:openapi-generator-cli-7.18.0.jar 
 | `separateResources` | `true`  | Generate separate `*-resources.ts` files for GET operations |
 | `readonlyModels`    | `true`  | Add `readonly` modifier to response model properties        |
 
+An array with `uniqueItems: true` is typed `Array<T>`, not `Set<T>`. JSON has no sets: a response arrives as an
+array, and `JSON.stringify`, which Angular uses for request bodies, sends a `Set` as `{}`. A `typeMappings` entry
+`set: 'Set'` restores the old type.
+
 ## Usage in Components
 
 ```typescript
