@@ -8,7 +8,6 @@ import com.fasterxml.jackson.core.io.JsonStringEncoder;
 import org.openapitools.codegen.CodegenOperation;
 import org.openapitools.codegen.CodegenParameter;
 import org.openapitools.codegen.CodegenProperty;
-import org.openapitools.codegen.DefaultCodegen;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -29,6 +28,8 @@ final class TypeScriptSnippets {
 
     /** TypeScript types that {@code String()} turns into a form field value without losing information. */
     private static final Set<String> TS_SCALAR_TYPES = Set.of("string", "number", "boolean");
+    /** {@code application/json} or a {@code +json} media type such as {@code application/vnd.api+json}. */
+    private static final Pattern JSON_MEDIA_TYPE = Pattern.compile("(?i)application/([^;]+\\+)?json(\\s*;.*)?");
     /** An ASCII identifier, which TypeScript accepts as a property name without quotes. */
     private static final Pattern IDENTIFIER = Pattern.compile("[A-Za-z_$][A-Za-z0-9_$]*");
 
@@ -305,13 +306,12 @@ final class TypeScriptSnippets {
      * Computes the {@code FormData.append} statement for each multipart field and stores it in the
      * {@code x-form-append} vendor extension.
      *
-     * <p>{@code FormData} only accepts strings and Blobs. The collection shape decides first: an array or set of
-     * binaries goes out as one part per item. Any other array or set goes out as repeated fields, OpenAPI's default
-     * encoding for primitive items, unless its items are objects or arrays or its {@code encoding} names a JSON
-     * content type; then it goes out as one {@code application/json} array part. Of the other fields, a binary is
-     * appended as it is, a scalar or enum is converted with {@code String()}, and everything else (objects, maps, or a
-     * field whose encoding names JSON) goes out as one {@code application/json} part, which is what Spring's
-     * {@code @RequestPart} expects for a DTO.</p>
+     * <p>{@code FormData} only accepts strings and Blobs. A binary, or each binary of an array or set, is appended as
+     * it is. A string, number, boolean, enum value or {@code Date}, alone or as the items of an array or set, goes out
+     * as one text field per value, OpenAPI's default encoding for primitives, with dates in ISO 8601. Everything else
+     * (objects, maps, untyped values, and any field whose {@code encoding} names a JSON media type) goes out as one
+     * JSON part of the declared media type or {@code application/json}, which is what Spring's {@code @RequestPart}
+     * expects for a DTO.</p>
      *
      * @param op the operation whose form parameters should be processed
      */
@@ -319,33 +319,39 @@ final class TypeScriptSnippets {
         for (CodegenParameter param : op.formParams) {
             String name = param.paramName;
             String key = stringLiteral(param.baseName);
-            boolean jsonEncoding = param.contentType != null && DefaultCodegen.isJsonMimeType(param.contentType);
+            String jsonType = param.contentType != null && JSON_MEDIA_TYPE.matcher(param.contentType).matches() ? param.contentType : null;
             String statement;
             if (param.isArray) {
-                if (isBinaryType(param.items != null ? param.items.dataType : null)) {
+                CodegenProperty items = param.items;
+                String text = items == null || jsonType != null ? null : textValue(items.dataType, items.isEnum || items.isEnumRef, "item");
+                if (items != null && isBinaryType(items.dataType)) {
                     statement = name + ".forEach(item => formData.append(" + key + ", item));";
-                } else if (jsonEncoding || isStructured(param.items)) {
-                    statement = appendJsonPart(key, "Array.from(" + name + ")");
+                } else if (text != null) {
+                    statement = name + ".forEach(item => formData.append(" + key + ", " + text + "));";
                 } else {
-                    statement = name + ".forEach(item => formData.append(" + key + ", String(item)));";
+                    statement = appendJsonPart(key, "Array.from(" + name + ")", jsonType);
                 }
             } else if (isBinaryType(param.dataType)) {
                 statement = "formData.append(" + key + ", " + name + ");";
-            } else if (!jsonEncoding && (param.isEnum || param.isEnumRef || TS_SCALAR_TYPES.contains(param.dataType))) {
-                statement = "formData.append(" + key + ", String(" + name + "));";
             } else {
-                statement = appendJsonPart(key, name);
+                String text = jsonType != null ? null : textValue(param.dataType, param.isEnum || param.isEnumRef, name);
+                statement = text != null ? "formData.append(" + key + ", " + text + ");" : appendJsonPart(key, name, jsonType);
             }
             param.vendorExtensions.put("x-form-append", statement);
         }
     }
 
-    private static String appendJsonPart(String key, String value) {
-        return "formData.append(" + key + ", new Blob([JSON.stringify(" + value + ")], { type: 'application/json' }));";
+    /** Returns the expression that turns a value of this type into a text field, or null for a type sent as JSON. */
+    private static String textValue(String dataType, boolean isEnum, String value) {
+        if ("Date".equals(dataType)) {
+            return value + ".toISOString()";
+        }
+        return isEnum || TS_SCALAR_TYPES.contains(dataType) ? "String(" + value + ")" : null;
     }
 
-    private static boolean isStructured(CodegenProperty items) {
-        return items != null && (items.isModel || items.isMap || items.isFreeFormObject || items.isArray);
+    private static String appendJsonPart(String key, String value, String jsonType) {
+        String type = stringLiteral(jsonType != null ? jsonType : "application/json");
+        return "formData.append(" + key + ", new Blob([JSON.stringify(" + value + ")], { type: " + type + " }));";
     }
 
     private static boolean isBinaryType(String dataType) {
