@@ -90,6 +90,20 @@ paths:
                 due:
                   type: string
                   format: date-time
+                day:
+                  type: string
+                  format: date
+                stamps:
+                  type: array
+                  items:
+                    type:
+                      - string
+                      - 'null'
+                    format: date-time
+                attachments:
+                  type: array
+                  items: {}
+                anything: {}
             encoding:
               jsonLabels:
                 contentType: application/json

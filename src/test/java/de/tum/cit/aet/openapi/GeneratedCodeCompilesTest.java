@@ -5,6 +5,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
@@ -17,11 +18,14 @@ class GeneratedCodeCompilesTest {
     private static final Path FIXTURES = Path.of("src/test/resources/fixtures");
     private static final Path TYPESCRIPT = Path.of("src/test/typescript").toAbsolutePath();
 
-    private static final Map<String, Map<String, String>> OPTION_SETS = Map.of(
-            "resources", Map.of(),
-            "inline-resources", Map.of("separateResources", "false"),
-            "observables-only", Map.of("useHttpResource", "false", "separateResources", "false"),
-            "model-affixes", Map.of("modelNamePrefix", "Api", "modelNameSuffix", "Model", "modelSuffix", "Dto"));
+    private static final Map<String, Consumer<CodegenConfigurator>> OPTION_SETS = Map.of(
+            "resources", configurator -> { },
+            "inline-resources", configurator -> configurator.addAdditionalProperty("separateResources", "false"),
+            "observables-only", configurator -> configurator.addAdditionalProperty("useHttpResource", "false")
+                    .addAdditionalProperty("separateResources", "false"),
+            "model-affixes", configurator -> configurator.addAdditionalProperty("modelNamePrefix", "Api")
+                    .addAdditionalProperty("modelNameSuffix", "Model").addAdditionalProperty("modelSuffix", "Dto"),
+            "date-objects", configurator -> configurator.addTypeMapping("DateTime", "Date").addTypeMapping("date", "Date"));
 
     @TempDir
     Path tempDir;
@@ -45,12 +49,12 @@ class GeneratedCodeCompilesTest {
                 TYPESCRIPT.resolve("node_modules/typescript/bin/tsc").toString(), "-p", "tsconfig.json");
     }
 
-    private static void generate(Path spec, Path outputDir, Map<String, String> additionalProperties) {
+    private static void generate(Path spec, Path outputDir, Consumer<CodegenConfigurator> options) {
         CodegenConfigurator configurator = new CodegenConfigurator()
                 .setGeneratorName(Angular22Generator.GENERATOR_NAME)
                 .setInputSpec(spec.toAbsolutePath().toString())
                 .setOutputDir(outputDir.toString());
-        additionalProperties.forEach(configurator::addAdditionalProperty);
+        options.accept(configurator);
         new DefaultGenerator().opts(configurator.toClientOptInput()).generate();
     }
 }

@@ -91,7 +91,7 @@ class Angular22GeneratorTest {
         assertContains(api, "formData.append('labels', new Blob([JSON.stringify(labels)], { type: 'application/json' }));");
         // Binary fields are appended as they are.
         assertContains(api, "formData.append('file', file);");
-        assertContains(api, "files.forEach(item => formData.append('files', item));");
+        assertContains(api, "files.forEach(item => { if (item !== undefined && item !== null) { formData.append('files', item); } });");
         // Scalars and enums become strings, the only non-Blob value FormData accepts.
         assertContains(api, "formData.append('name', String(name));");
         assertContains(api, "formData.append('count', String(count));");

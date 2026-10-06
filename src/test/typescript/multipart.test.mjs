@@ -15,7 +15,7 @@ new Function('exports', 'require', compiled)(exports, (name) => angular[name]);
 const form = new exports.UploadApi().createUpload(
     { title: 'Algorithms' },
     new Blob(['slides']),
-    [new Blob(['a']), new Blob(['b'])],
+    [new Blob(['a']), null, new Blob(['b'])],
     'n',
     3,
     0.5,
@@ -29,10 +29,14 @@ const form = new exports.UploadApi().createUpload(
     ['FINAL'],
     'quoted',
     ['a', 'b'],
-    [{ id: 7 }, ['x', 'y']],
+    [{ id: 7 }, ['x', 'y'], 'a'],
     [new Date('2026-10-06T12:34:56Z')],
     ['a', 'b'],
     new Date('2026-10-07T08:00:00Z'),
+    new Date('2026-10-08T00:00:00Z'),
+    [new Date('2026-10-09T10:00:00Z'), null],
+    [new Blob(['first']), new Blob(['second'])],
+    new Blob(['any']),
 );
 
 const parts = {};
@@ -58,7 +62,15 @@ assert.deepEqual(parts.modes, ['DRAFT', 'FINAL'], 'an array of enum values is se
 assert.deepEqual(parts.modeRefs, ['FINAL'], 'an array of enum references is sent as repeated fields');
 assert.deepEqual(parts["it's"], ['quoted'], 'a field name with an apostrophe keeps its name');
 assert.deepEqual(parts.jsonLabels, json('["a","b"]'), 'an encoding with contentType application/json sends one JSON part');
-assert.deepEqual(parts.anyItems, json('[{"id":7},["x","y"]]'), 'an array of untyped items is sent as a JSON array');
+assert.deepEqual(
+    parts.anyItems,
+    [...json('{"id":7}'), ...json('["x","y"]'), 'a'],
+    'an untyped item is sent by its value: an object or array as a JSON part, a primitive as text',
+);
+assert.deepEqual(parts.attachments, [{ type: '', body: 'first' }, { type: '', body: 'second' }], 'untyped items that are files are sent as files');
+assert.deepEqual(parts.anything, [{ type: '', body: 'any' }], 'an untyped field that is a file is sent as a file');
+assert.deepEqual(parts.day, ['2026-10-08'], 'a date of format date is sent as a full date');
+assert.deepEqual(parts.stamps, ['2026-10-09T10:00:00.000Z'], 'a null item is left out');
 assert.deepEqual(parts.dates, ['2026-10-06T12:34:56.000Z'], 'an array of dates is sent as repeated ISO 8601 fields');
 assert.deepEqual(parts.due, ['2026-10-07T08:00:00.000Z'], 'a date is sent as an ISO 8601 field');
 assert.deepEqual(
