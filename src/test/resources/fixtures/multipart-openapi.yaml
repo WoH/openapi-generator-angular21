@@ -75,9 +75,26 @@ paths:
                   type: array
                   items:
                     type: string
+                anyItems:
+                  type: array
+                  items: {}
+                dates:
+                  type: array
+                  items:
+                    type: string
+                    format: date-time
+                vendorLabels:
+                  type: array
+                  items:
+                    type: string
+                due:
+                  type: string
+                  format: date-time
             encoding:
               jsonLabels:
                 contentType: application/json
+              vendorLabels:
+                contentType: application/vnd.example+json
       responses:
         '200':
           description: Created course

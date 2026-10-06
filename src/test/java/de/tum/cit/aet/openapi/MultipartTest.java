@@ -18,7 +18,8 @@ class MultipartTest {
         CodegenConfigurator configurator = new CodegenConfigurator()
                 .setGeneratorName(Angular22Generator.GENERATOR_NAME)
                 .setInputSpec(Path.of("src/test/resources/fixtures/multipart-openapi.yaml").toAbsolutePath().toString())
-                .setOutputDir(tempDir.toString());
+                .setOutputDir(tempDir.toString())
+                .addTypeMapping("DateTime", "Date");
         new DefaultGenerator().opts(configurator.toClientOptInput()).generate();
 
         NodeProcess.assertSucceeds(Path.of("src/test/typescript"), "A multipart part has the wrong body or type",

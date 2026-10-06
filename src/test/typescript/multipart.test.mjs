@@ -29,6 +29,10 @@ const form = new exports.UploadApi().createUpload(
     ['FINAL'],
     'quoted',
     ['a', 'b'],
+    [{ id: 7 }, ['x', 'y']],
+    [new Date('2026-10-06T12:34:56Z')],
+    ['a', 'b'],
+    new Date('2026-10-07T08:00:00Z'),
 );
 
 const parts = {};
@@ -54,3 +58,11 @@ assert.deepEqual(parts.modes, ['DRAFT', 'FINAL'], 'an array of enum values is se
 assert.deepEqual(parts.modeRefs, ['FINAL'], 'an array of enum references is sent as repeated fields');
 assert.deepEqual(parts["it's"], ['quoted'], 'a field name with an apostrophe keeps its name');
 assert.deepEqual(parts.jsonLabels, json('["a","b"]'), 'an encoding with contentType application/json sends one JSON part');
+assert.deepEqual(parts.anyItems, json('[{"id":7},["x","y"]]'), 'an array of untyped items is sent as a JSON array');
+assert.deepEqual(parts.dates, ['2026-10-06T12:34:56.000Z'], 'an array of dates is sent as repeated ISO 8601 fields');
+assert.deepEqual(parts.due, ['2026-10-07T08:00:00.000Z'], 'a date is sent as an ISO 8601 field');
+assert.deepEqual(
+    parts.vendorLabels,
+    [{ type: 'application/vnd.example+json', body: '["a","b"]' }],
+    'an encoding with a +json media type sends one part of that type',
+);
