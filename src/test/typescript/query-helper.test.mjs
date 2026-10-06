@@ -33,3 +33,5 @@ assert.equal(
     'searchTerm=a+b&page=0&authorities=USER&authorities=TA&exerciseIds=4&exerciseIds=5&scoreRange.lower=0.5',
     'an object sends one key per property without its own name, nested objects as dotted keys',
 );
+assert.throws(() => query('sort', [{ property: 'title' }]), /sort/, 'an object in an array has no OpenAPI query format, so it fails instead of sending [object Object]');
+assert.throws(() => query('search', { orders: [{ property: 'title' }] }), /orders/, 'an object in a nested array fails the same way');
