@@ -60,3 +60,5 @@ assert.throws(() => query('point', { x: 1, r: { min: 1 } }, 'form', false), /poi
 
 assert.equal(query('point', { x: 1, y: 2 }, 'json'), 'point=%7B%22x%22%3A1%2C%22y%22%3A2%7D', 'a parameter with JSON content is sent as JSON');
 assert.equal(query('point', null, 'json'), '', 'a parameter with JSON content is left out when null');
+assert.equal(query('point', { name: 'a', ids: [] }, 'form', false), 'point=name%2Ca', 'an empty array inside a joined object is left out');
+assert.throws(() => query('grid', [[1, 2]]), /array in grid/, 'the error for an array inside an array calls it an array');

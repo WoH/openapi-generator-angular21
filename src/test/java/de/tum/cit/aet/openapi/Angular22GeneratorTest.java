@@ -318,6 +318,8 @@ class Angular22GeneratorTest {
                 appendQueryParam(%1$s, 'pipes', %2$spipes, 'pipeDelimited', false);
                 appendQueryParam(%1$s, 'spaces', %2$sspaces, 'spaceDelimited', false);
                 appendQueryParam(%1$s, 'jsonPoint', %2$sjsonPoint, 'json');
+                appendQueryParam(%1$s, 'vendorPoint', %2$svendorPoint, 'json');
+                appendQueryParam(%1$s, 'textName', %2$stextName);
                 appendQueryParam(%1$s, 'page', %2$spage);
                 """;
         assertContains(Files.readString(tempDir.resolve("api/score-api.ts")), styled.formatted("queryParams", "").indent(8));

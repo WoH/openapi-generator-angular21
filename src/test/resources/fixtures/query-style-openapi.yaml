@@ -51,6 +51,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Point'
+        - name: vendorPoint
+          in: query
+          content:
+            application/vnd.example+json:
+              schema:
+                $ref: '#/components/schemas/Point'
+        - name: textName
+          in: query
+          content:
+            text/plain:
+              schema:
+                type: string
         - name: page
           in: query
           schema:
