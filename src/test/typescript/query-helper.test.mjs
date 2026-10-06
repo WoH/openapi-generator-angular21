@@ -57,3 +57,6 @@ assert.equal(query('ids', [1, null, 2], 'form', false), 'ids=1%2C2', 'null items
 assert.equal(query('search', { ids: [1, null] }), 'ids=1', 'null items of a nested array are left out');
 assert.throws(() => query('filter', [1, 2], 'deepObject', true), /filter/, 'deepObject has no format for an array, so it fails');
 assert.throws(() => query('point', { x: 1, r: { min: 1 } }, 'form', false), /point\.r/, 'the error names the property that holds the object');
+
+assert.equal(query('point', { x: 1, y: 2 }, 'json'), 'point=%7B%22x%22%3A1%2C%22y%22%3A2%7D', 'a parameter with JSON content is sent as JSON');
+assert.equal(query('point', null, 'json'), '', 'a parameter with JSON content is left out when null');

@@ -45,6 +45,12 @@ paths:
             type: array
             items:
               type: string
+        - name: jsonPoint
+          in: query
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Point'
         - name: page
           in: query
           schema:
