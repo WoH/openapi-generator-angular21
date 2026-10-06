@@ -20,7 +20,8 @@ class GeneratedCodeCompilesTest {
     private static final Map<String, Map<String, String>> OPTION_SETS = Map.of(
             "resources", Map.of(),
             "inline-resources", Map.of("separateResources", "false"),
-            "observables-only", Map.of("useHttpResource", "false", "separateResources", "false"));
+            "observables-only", Map.of("useHttpResource", "false", "separateResources", "false"),
+            "model-affixes", Map.of("modelNamePrefix", "Api", "modelNameSuffix", "Model", "modelSuffix", "Dto"));
 
     @TempDir
     Path tempDir;
