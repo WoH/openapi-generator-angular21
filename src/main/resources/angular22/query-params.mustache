@@ -1,28 +1,60 @@
 {{>licenseInfo}}
-/**
- * Appends a query parameter as OpenAPI form/explode and Spring's data binding expect it: nothing for null or
- * undefined, arrays and sets as repeated keys, dates as ISO 8601, an object as one key per property and nested
- * objects as dotted keys. OpenAPI defines no format for an object inside an array, so such a value throws.
- */
-export function appendQueryParam(target: URLSearchParams, name: string, value: unknown): void {
-    append(target, name, value, false);
-}
+export type QueryParamStyle = 'form' | 'spaceDelimited' | 'pipeDelimited' | 'deepObject';
 
-function append(target: URLSearchParams, name: string, value: unknown, nested: boolean): void {
+const DELIMITERS: Record<QueryParamStyle, string> = { form: ',', spaceDelimited: ' ', pipeDelimited: '|', deepObject: ',' };
+
+/**
+ * Appends a query parameter in its OpenAPI style: nothing for null or undefined, dates as ISO 8601, an array or set
+ * as repeated keys with explode or as one value joined by the style's delimiter without it, and an object as one key
+ * per property (form with explode), as name[key] keys (deepObject), or as one value of keys and values joined by the
+ * style's delimiter (without explode). A nested object under form with explode gets dotted keys, which is how Spring binds it;
+ * OpenAPI defines no format for that, nor for an object inside an array, which throws.
+ */
+export function appendQueryParam(target: URLSearchParams, name: string, value: unknown, style: QueryParamStyle = 'form', explode = true): void {
     if (value === undefined || value === null) {
         return;
     }
     if (Array.isArray(value) || value instanceof Set) {
-        for (const item of value) {
-            target.append(name, format(item, name));
+        const items = Array.from(value, (item) => format(item, name));
+        if (explode) {
+            items.forEach((item) => target.append(name, item));
+        } else {
+            target.append(name, items.join(DELIMITERS[style]));
         }
-    } else if (typeof value === 'object' && !(value instanceof Date)) {
-        for (const [key, entry] of Object.entries(value)) {
-            append(target, nested ? `${name}.${key}` : key, entry, true);
+    } else if (isObject(value)) {
+        if (style === 'deepObject') {
+            appendProperties(target, value, name, (outer, key) => `${outer}[${key}]`);
+        } else if (explode) {
+            appendProperties(target, value, '', (outer, key) => (outer ? `${outer}.${key}` : key));
+        } else {
+            const entries = Object.entries(value).filter(([, entry]) => entry !== undefined && entry !== null);
+            target.append(name, entries.flatMap(([key, entry]) => [key, format(entry, name)]).join(DELIMITERS[style]));
         }
     } else {
         target.append(name, format(value, name));
     }
+}
+
+function appendProperties(target: URLSearchParams, object: object, outer: string, child: (outer: string, key: string) => string): void {
+    for (const [key, entry] of Object.entries(object)) {
+        const name = child(outer, key);
+        if (entry === undefined || entry === null) {
+            continue;
+        }
+        if (Array.isArray(entry) || entry instanceof Set) {
+            for (const item of entry) {
+                target.append(name, format(item, name));
+            }
+        } else if (isObject(entry)) {
+            appendProperties(target, entry, name, child);
+        } else {
+            target.append(name, format(entry, name));
+        }
+    }
+}
+
+function isObject(value: unknown): value is object {
+    return typeof value === 'object' && value !== null && !(value instanceof Date);
 }
 
 function format(value: unknown, name: string): string {

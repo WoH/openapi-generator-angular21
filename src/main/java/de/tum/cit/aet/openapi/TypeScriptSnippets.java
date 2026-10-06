@@ -156,6 +156,18 @@ final class TypeScriptSnippets {
         return name;
     }
 
+    /**
+     * Returns the arguments that pass a query parameter's style and explode to {@code appendQueryParam}, e.g.
+     * {@code , 'deepObject', true}, or nothing for the default, form with explode.
+     *
+     * @param param the query parameter
+     * @return the arguments to append to the call
+     */
+    static String queryStyleArguments(CodegenParameter param) {
+        String style = param.style != null ? param.style : "form";
+        return "form".equals(style) && param.isExplode ? "" : ", " + stringLiteral(style) + ", " + param.isExplode;
+    }
+
     static String paramsInterfaceName(CodegenOperation op) {
         return Names.toPascalCase(op.operationId) + "Params";
     }

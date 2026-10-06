@@ -58,7 +58,7 @@ export function {{nickname}}Resource({{{vendorExtensions.x-resource-params}}}): 
 {{/vendorExtensions.x-all-query-params-optional}}
         const searchParams = new URLSearchParams();
 {{#queryParams}}
-        appendQueryParam(searchParams, {{{vendorExtensions.x-wire-name-literal}}}, queryParams.{{vendorExtensions.x-query-key}});
+        appendQueryParam(searchParams, {{{vendorExtensions.x-wire-name-literal}}}, queryParams.{{vendorExtensions.x-query-key}}{{{vendorExtensions.x-query-style-args}}});
 {{/queryParams}}
         const query = searchParams.toString();
 {{/hasQueryParams}}

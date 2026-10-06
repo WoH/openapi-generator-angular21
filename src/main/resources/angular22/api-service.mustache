@@ -42,7 +42,7 @@ export class {{classname}} {
 {{#hasQueryParams}}
         const queryParams = new URLSearchParams();
 {{#queryParams}}
-        appendQueryParam(queryParams, {{{vendorExtensions.x-wire-name-literal}}}, {{paramName}});
+        appendQueryParam(queryParams, {{{vendorExtensions.x-wire-name-literal}}}, {{paramName}}{{{vendorExtensions.x-query-style-args}}});
 {{/queryParams}}
         const queryString = queryParams.toString();
         const url = `${this.basePath}{{{vendorExtensions.xPathTemplate}}}${queryString ? `?${queryString}` : ''}`;
