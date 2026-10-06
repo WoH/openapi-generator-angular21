@@ -313,6 +313,7 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
             for (ModelMap modelMap : modelsMap.getModels()) {
                 CodegenModel model = modelMap.getModel();
                 requireWhatAncestorsRequire(model);
+                modelMap.put("tsImports", importsFromClassFiles(modelMap));
 
                 boolean isInputDto = model.name.endsWith("Create") ||
                         model.name.endsWith("Update") ||
@@ -425,11 +426,11 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
         for (CodegenOperation op : ops) {
             modelImports.addAll(op.imports);
         }
-        List<Map<String, String>> tsImports = new ArrayList<>();
-        for (String im : modelImports) {
-            tsImports.add(Map.of("classname", im, "filename", toModelFilename(im)));
-        }
-        return tsImports;
+        return modelImports.stream().map(Angular22Generator::tsImport).toList();
+    }
+
+    private static Map<String, String> tsImport(String className) {
+        return Map.of("classname", className, "filename", classFilename(className));
     }
 
     /**
@@ -481,7 +482,22 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
      */
     @Override
     public String toModelFilename(String name) {
-        return Names.toKebabCase(toModelName(name));
+        return classFilename(toModelName(name));
+    }
+
+    /**
+     * Keeps the models that the parent's {@code postProcessAllModels} imports into a model file, but names each file
+     * after its class, as {@link #toModelFilename} and the API imports do. The parent names it
+     * {@code toModelFilename(removeModelPrefixSuffix(className))}, which applies {@code modelSuffix} twice when
+     * {@code modelNameSuffix} is set too, because the suffix it strips is no longer at the end of the name.
+     */
+    private static List<Map<String, String>> importsFromClassFiles(ModelMap modelMap) {
+        List<?> parentImports = (List<?>) modelMap.get("tsImports");
+        return parentImports.stream().map(entry -> tsImport((String) ((Map<?, ?>) entry).get("classname"))).toList();
+    }
+
+    private static String classFilename(String className) {
+        return Names.toKebabCase(className);
     }
 
     /**
