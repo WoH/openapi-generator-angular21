@@ -306,6 +306,22 @@ class Angular22GeneratorTest {
     }
 
     @Test
+    void passesTheDeclaredStyleOfAQueryParameterToTheHelper() throws IOException {
+        generateFixture("fixtures/query-style-openapi.yaml", Map.of());
+
+        String styled = """
+                appendQueryParam(%1$s, 'filter', %2$sfilter, 'deepObject', true);
+                appendQueryParam(%1$s, 'ids', %2$sids, 'form', false);
+                appendQueryParam(%1$s, 'point', %2$spoint, 'form', false);
+                appendQueryParam(%1$s, 'pipes', %2$spipes, 'pipeDelimited', false);
+                appendQueryParam(%1$s, 'spaces', %2$sspaces, 'spaceDelimited', false);
+                appendQueryParam(%1$s, 'page', %2$spage);
+                """;
+        assertContains(Files.readString(tempDir.resolve("api/score-api.ts")), styled.formatted("queryParams", "").indent(8));
+        assertContains(Files.readString(tempDir.resolve("api/score-resources.ts")), styled.formatted("searchParams", "queryParams.").indent(8));
+    }
+
+    @Test
     void typesUniqueItemsArraysAsArrays() throws IOException {
         generateFixture("fixtures/object-query-openapi.yaml", Map.of());
 

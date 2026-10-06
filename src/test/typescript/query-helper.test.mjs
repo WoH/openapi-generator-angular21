@@ -7,9 +7,9 @@ const exports = {};
 new Function('exports', ts.transpile(source, { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }))(exports);
 const { appendQueryParam } = exports;
 
-function query(name, value) {
+function query(name, value, ...styleAndExplode) {
     const params = new URLSearchParams();
-    appendQueryParam(params, name, value);
+    appendQueryParam(params, name, value, ...styleAndExplode);
     return params.toString();
 }
 
@@ -35,3 +35,16 @@ assert.equal(
 );
 assert.throws(() => query('sort', [{ property: 'title' }]), /sort/, 'an object in an array has no OpenAPI query format, so it fails instead of sending [object Object]');
 assert.throws(() => query('search', { orders: [{ property: 'title' }] }), /orders/, 'an object in a nested array fails the same way');
+
+assert.equal(query('ids', [1, 2, 3], 'form', false), 'ids=1%2C2%2C3', 'form without explode joins an array with commas');
+assert.equal(query('point', { x: 1, y: 2 }, 'form', false), 'point=x%2C1%2Cy%2C2', 'form without explode joins keys and values with commas');
+assert.equal(query('pipes', ['a', 'b'], 'pipeDelimited', false), 'pipes=a%7Cb', 'pipeDelimited joins an array with pipes');
+assert.equal(query('point', { x: 1, y: 2 }, 'pipeDelimited', false), 'point=x%7C1%7Cy%7C2', 'pipeDelimited joins keys and values with pipes');
+assert.equal(query('point', { x: 1, y: 2 }, 'spaceDelimited', false), 'point=x+1+y+2', 'spaceDelimited joins keys and values with spaces');
+assert.equal(query('spaces', ['a', 'b'], 'spaceDelimited', false), 'spaces=a+b', 'spaceDelimited joins an array with spaces');
+assert.equal(query('ids', [1, 2], 'pipeDelimited', true), 'ids=1&ids=2', 'a delimited style with explode repeats the key');
+assert.equal(
+    query('filter', { name: 'x', range: { min: 1 } }, 'deepObject', true),
+    'filter%5Bname%5D=x&filter%5Brange%5D%5Bmin%5D=1',
+    'deepObject sends name[key] keys, nested objects as name[key][key]',
+);
