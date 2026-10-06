@@ -104,11 +104,17 @@ paths:
                   type: array
                   items: {}
                 anything: {}
+                choiceLabels:
+                  type: array
+                  items:
+                    type: string
             encoding:
               jsonLabels:
                 contentType: application/json
               vendorLabels:
                 contentType: application/vnd.example+json
+              choiceLabels:
+                contentType: application/json, application/vnd.example+json
       responses:
         '200':
           description: Created course

@@ -37,6 +37,7 @@ const form = new exports.UploadApi().createUpload(
     [new Date('2026-10-09T10:00:00Z'), null],
     [new Blob(['first']), new Blob(['second'])],
     new Blob(['any']),
+    ['a', 'b'],
 );
 
 const parts = {};
@@ -71,6 +72,11 @@ assert.deepEqual(parts.attachments, [{ type: '', body: 'first' }, { type: '', bo
 assert.deepEqual(parts.anything, [{ type: '', body: 'any' }], 'an untyped field that is a file is sent as a file');
 assert.deepEqual(parts.day, ['2026-10-08'], 'a date of format date is sent as a full date');
 assert.deepEqual(parts.stamps, ['2026-10-09T10:00:00.000Z'], 'a null item is left out');
+assert.deepEqual(
+    parts.choiceLabels,
+    [{ type: 'application/json', body: '["a","b"]' }],
+    'an encoding that lists several JSON media types sends one part typed with the first',
+);
 assert.deepEqual(parts.dates, ['2026-10-06T12:34:56.000Z'], 'an array of dates is sent as repeated ISO 8601 fields');
 assert.deepEqual(parts.due, ['2026-10-07T08:00:00.000Z'], 'a date is sent as an ISO 8601 field');
 assert.deepEqual(
