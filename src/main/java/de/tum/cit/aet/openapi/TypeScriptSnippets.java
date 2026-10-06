@@ -29,7 +29,6 @@ final class TypeScriptSnippets {
     /** TypeScript types that {@code String()} turns into a form field value without losing information. */
     private static final Set<String> TS_SCALAR_TYPES = Set.of("string", "number", "boolean");
     private static final Set<String> QUERY_STYLES = Set.of("form", "spaceDelimited", "pipeDelimited", "deepObject");
-    /** {@code application/json} or a {@code +json} media type such as {@code application/vnd.api+json}. */
     private static final Pattern JSON_MEDIA_TYPE = Pattern.compile("(?i)application/([^;]+\\+)?json(\\s*;.*)?");
     /** An ASCII identifier, which TypeScript accepts as a property name without quotes. */
     private static final Pattern IDENTIFIER = Pattern.compile("[A-Za-z_$][A-Za-z0-9_$]*");
@@ -317,11 +316,12 @@ final class TypeScriptSnippets {
      * Computes the {@code FormData.append} statement for each multipart field and stores it in the
      * {@code x-form-append} vendor extension.
      *
-     * <p>{@code FormData} only accepts strings and Blobs. A binary, or each binary of an array or set, is appended as
-     * it is. A string, number, boolean, enum value or {@code Date}, alone or as the items of an array or set, goes out
-     * as one text field per value, OpenAPI's default encoding for primitives, with dates in ISO 8601. Everything else
-     * (objects, maps, untyped values, and any field whose {@code encoding} names a JSON media type) goes out as one
-     * JSON part of the declared media type or {@code application/json}, which is what Spring's {@code @RequestPart}
+     * <p>{@code FormData} only accepts strings and Blobs. A field, or each item of an array or set except null and
+     * undefined ones, becomes one part: a binary as it is, a string, number, boolean or enum value as text (OpenAPI's
+     * default encoding for primitives), a {@code Date} as ISO 8601 (a full date for {@code format: date}), and an
+     * untyped value by what it holds at runtime. Everything else (objects, maps, and any non-binary field whose
+     * {@code encoding} names a JSON media type) goes out as one JSON part of the declared media type or
+     * {@code application/json}, an array whole and with its nulls, which is what Spring's {@code @RequestPart}
      * expects for a DTO.</p>
      *
      * @param op the operation whose form parameters should be processed
@@ -330,39 +330,63 @@ final class TypeScriptSnippets {
         for (CodegenParameter param : op.formParams) {
             String name = param.paramName;
             String key = stringLiteral(param.baseName);
-            String jsonType = param.contentType != null && JSON_MEDIA_TYPE.matcher(param.contentType).matches() ? param.contentType : null;
+            String jsonType = isJsonMediaType(param.contentType) ? param.contentType : null;
             String statement;
             if (param.isArray) {
                 CodegenProperty items = param.items;
-                String text = items == null || jsonType != null ? null : textValue(items.dataType, items.isEnum || items.isEnumRef, "item");
-                if (items != null && isBinaryType(items.dataType)) {
-                    statement = name + ".forEach(item => formData.append(" + key + ", item));";
-                } else if (text != null) {
-                    statement = name + ".forEach(item => formData.append(" + key + ", " + text + "));";
-                } else {
-                    statement = appendJsonPart(key, "Array.from(" + name + ")", jsonType);
-                }
-            } else if (isBinaryType(param.dataType)) {
-                statement = "formData.append(" + key + ", " + name + ");";
+                String part = items == null ? null
+                        : partValue(items.dataType, items.isEnum || items.isEnumRef, items.isAnyType, items.isDate, jsonType, "item");
+                statement = part == null ? appendJsonPart(key, "Array.from(" + name + ")", jsonType)
+                        : name + ".forEach(item => { if (item !== undefined && item !== null) { formData.append(" + key + ", " + part + "); } });";
             } else {
-                String text = jsonType != null ? null : textValue(param.dataType, param.isEnum || param.isEnumRef, name);
-                statement = text != null ? "formData.append(" + key + ", " + text + ");" : appendJsonPart(key, name, jsonType);
+                String part = partValue(param.dataType, param.isEnum || param.isEnumRef, param.isAnyType, param.isDate, jsonType, name);
+                statement = part == null ? appendJsonPart(key, name, jsonType) : "formData.append(" + key + ", " + part + ");";
             }
             param.vendorExtensions.put("x-form-append", statement);
         }
     }
 
-    /** Returns the expression that turns a value of this type into a text field, or null for a type sent as JSON. */
-    private static String textValue(String dataType, boolean isEnum, String value) {
-        if ("Date".equals(dataType)) {
-            return value + ".toISOString()";
+    /**
+     * Returns the expression that turns one value into a part, or null when the value belongs in a JSON part. An
+     * untyped value is only known at runtime, so its expression keeps a Blob, sends a date as ISO 8601 and another
+     * primitive as text, and wraps anything else in a JSON part.
+     */
+    private static String partValue(String dataType, boolean isEnum, boolean isAnyType, boolean isDate, String jsonType, String value) {
+        if (isBinaryType(dataType)) {
+            return value;
         }
-        return isEnum || TS_SCALAR_TYPES.contains(dataType) ? "String(" + value + ")" : null;
+        if (jsonType != null) {
+            return null;
+        }
+        if ("Date".equals(dataType)) {
+            return value + ".toISOString()" + (isDate ? ".slice(0, 10)" : "");
+        }
+        if (isEnum || TS_SCALAR_TYPES.contains(dataType)) {
+            return "String(" + value + ")";
+        }
+        if (isAnyType) {
+            return value + " instanceof Blob ? " + value + " : " + value + " instanceof Date ? " + value + ".toISOString() : typeof " + value
+                    + " === 'object' ? " + jsonBlob(value, null) + " : String(" + value + ")";
+        }
+        return null;
     }
 
     private static String appendJsonPart(String key, String value, String jsonType) {
-        String type = stringLiteral(jsonType != null ? jsonType : "application/json");
-        return "formData.append(" + key + ", new Blob([JSON.stringify(" + value + ")], { type: " + type + " }));";
+        return "formData.append(" + key + ", " + jsonBlob(value, jsonType) + ");";
+    }
+
+    private static String jsonBlob(String value, String jsonType) {
+        return "new Blob([JSON.stringify(" + value + ")], { type: " + stringLiteral(jsonType != null ? jsonType : "application/json") + " })";
+    }
+
+    /**
+     * Whether a media type is {@code application/json} or a {@code +json} type such as {@code application/vnd.api+json}.
+     *
+     * @param mediaType the media type, or null
+     * @return whether it names JSON
+     */
+    static boolean isJsonMediaType(String mediaType) {
+        return mediaType != null && JSON_MEDIA_TYPE.matcher(mediaType).matches();
     }
 
     private static boolean isBinaryType(String dataType) {
