@@ -48,3 +48,12 @@ assert.equal(
     'filter%5Bname%5D=x&filter%5Brange%5D%5Bmin%5D=1',
     'deepObject sends name[key] keys, nested objects as name[key][key]',
 );
+assert.equal(query('filter', { ids: [1, 2] }, 'deepObject', false), 'filter%5Bids%5D=1&filter%5Bids%5D=2', 'deepObject repeats name[key] for an array property');
+
+assert.equal(query('ids', [], 'form', false), '', 'an empty array is left out without explode, as with it');
+assert.equal(query('point', { x: null }, 'form', false), '', 'an object without values is left out without explode, as with it');
+assert.equal(query('ids', [1, null, undefined, 2]), 'ids=1&ids=2', 'null and undefined items are left out');
+assert.equal(query('ids', [1, null, 2], 'form', false), 'ids=1%2C2', 'null items are left out of a joined array');
+assert.equal(query('search', { ids: [1, null] }), 'ids=1', 'null items of a nested array are left out');
+assert.throws(() => query('filter', [1, 2], 'deepObject', true), /filter/, 'deepObject has no format for an array, so it fails');
+assert.throws(() => query('point', { x: 1, r: { min: 1 } }, 'form', false), /point\.r/, 'the error names the property that holds the object');
