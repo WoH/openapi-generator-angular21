@@ -71,6 +71,13 @@ paths:
                     $ref: '#/components/schemas/UploadMode'
                 "it's":
                   type: string
+                jsonLabels:
+                  type: array
+                  items:
+                    type: string
+            encoding:
+              jsonLabels:
+                contentType: application/json
       responses:
         '200':
           description: Created course

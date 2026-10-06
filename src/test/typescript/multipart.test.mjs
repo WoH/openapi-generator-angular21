@@ -28,6 +28,7 @@ const form = new exports.UploadApi().createUpload(
     ['DRAFT', 'FINAL'],
     ['FINAL'],
     'quoted',
+    ['a', 'b'],
 );
 
 const parts = {};
@@ -47,8 +48,9 @@ assert.deepEqual(parts.active, ['false']);
 assert.deepEqual(parts.mode, ['DRAFT']);
 assert.deepEqual(parts.pages, json('[{"number":1}]'));
 assert.deepEqual(parts.labels, json('{"key":"value"}'));
-assert.deepEqual(parts.tags, json('["x","y"]'), 'a set is sent as a JSON array');
+assert.deepEqual(parts.tags, ['x', 'y'], 'an array of strings is sent as repeated fields, the default encoding of OpenAPI');
 assert.deepEqual(parts.sections, json('[{"number":2}]'), 'a set of objects is sent as a JSON array');
-assert.deepEqual(parts.modes, json('["DRAFT","FINAL"]'), 'an array of enum values is sent as a JSON array');
-assert.deepEqual(parts.modeRefs, json('["FINAL"]'));
+assert.deepEqual(parts.modes, ['DRAFT', 'FINAL'], 'an array of enum values is sent as repeated fields');
+assert.deepEqual(parts.modeRefs, ['FINAL'], 'an array of enum references is sent as repeated fields');
 assert.deepEqual(parts["it's"], ['quoted'], 'a field name with an apostrophe keeps its name');
+assert.deepEqual(parts.jsonLabels, json('["a","b"]'), 'an encoding with contentType application/json sends one JSON part');
