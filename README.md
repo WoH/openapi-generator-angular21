@@ -120,9 +120,40 @@ export function getCourseResource(courseId: Signal<number | undefined> | number)
 }
 ```
 
+### Query Parameters
+
 `api/query-params.ts` holds `appendQueryParam`, which every API and resources file with query parameters imports. It
-leaves out `null` and `undefined`, repeats arrays and sets, and sends an object as one key per property, the way
-Spring binds a query DTO.
+sends each parameter in its declared `style` and `explode`:
+
+- `form` with explode, the default, repeats the key of an array or set and sends an object as one key per property.
+  A nested object gets dotted keys (`range.min=1`), which is how Spring binds a query DTO, since OpenAPI defines no
+  format for it.
+- Without explode, `form`, `spaceDelimited` and `pipeDelimited` join an array, or an object's keys and values, with a
+  comma, a space or a pipe.
+- `deepObject` sends `filter[name]=x`. A nested object goes out as `filter[range][min]=1` and an array property as
+  repeated `filter[ids]` keys, conventions OpenAPI leaves open.
+- A parameter declared with JSON content, `application/json` or a `+json` type, goes out as JSON. Content of
+  another media type, such as `text/plain`, goes out in the default style.
+
+Outside JSON content, the helper leaves out `null` and `undefined` values and items, and empty arrays, sets and
+objects. Dates go out as ISO 8601. OpenAPI defines no query format for an object or array inside an array, or for a
+parameter that is an array under `deepObject`, so the helper throws, naming the property, when it gets one. A style
+that OpenAPI does not allow in a query, such as `simple`, fails generation.
+
+### Multipart Bodies
+
+Each multipart field follows its `encoding`. A field, or each item of an array or set except null ones, becomes one
+part. A binary goes out as it is. A string, number, boolean or enum value goes out as text, which is OpenAPI's
+default, and a `Date` as ISO 8601, or as a full date for `format: date`. An untyped value, such as an item of
+`items: {}`, goes out by what it holds at runtime, so files stay files. Objects and maps go out as one JSON part, and
+so does any field whose `encoding` names `application/json` or a `+json` media type. Spring reads a `@RequestPart List<String>` from one JSON part, so declare
+that encoding for it:
+
+```yaml
+encoding:
+  tags:
+    contentType: application/json
+```
 
 ## Installation
 

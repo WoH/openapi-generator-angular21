@@ -20,7 +20,7 @@
 - Mustache templates should stay minimal; prefer code in Java when logic is complex.
 
 ## Testing Guidelines
-- Tests live in `src/test/java` (`*Test.java`); each OpenAPI fixture they generate from lives in `src/test/resources/fixtures`.
+- Tests live in `src/test/java` (`*Test.java`); each OpenAPI fixture they generate from lives in `src/test/resources/fixtures`. A spec that must fail generation lives in `src/test/resources/invalid`, since `GeneratedCodeCompilesTest` generates every fixture.
 - `GeneratedCodeCompilesTest` type-checks the generated code of every fixture with the TypeScript compiler and Angular types pinned in `src/test/typescript`. `./gradlew test` runs `npm ci` there first, so it needs Node.js and npm.
 - Run `./gradlew test` before submitting changes that affect code generation.
 

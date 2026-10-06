@@ -14,7 +14,7 @@ class QueryHelperTest {
     Path tempDir;
 
     @Test
-    void appendsQueryParametersTheWaySpringBindsThem() throws IOException, InterruptedException {
+    void appendsQueryParametersInTheirDeclaredStyle() throws IOException, InterruptedException {
         CodegenConfigurator configurator = new CodegenConfigurator()
                 .setGeneratorName(Angular22Generator.GENERATOR_NAME)
                 .setInputSpec(Path.of("src/test/resources/fixtures/object-query-openapi.yaml").toAbsolutePath().toString())
