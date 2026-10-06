@@ -1,7 +1,8 @@
 {{>licenseInfo}}
-export type QueryParamStyle = 'form' | 'spaceDelimited' | 'pipeDelimited' | 'deepObject';
+/** An OpenAPI query style, or json for a parameter declared with JSON content. */
+export type QueryParamStyle = 'form' | 'spaceDelimited' | 'pipeDelimited' | 'deepObject' | 'json';
 
-const DELIMITERS: Record<Exclude<QueryParamStyle, 'deepObject'>, string> = { form: ',', spaceDelimited: ' ', pipeDelimited: '|' };
+const DELIMITERS: Record<Exclude<QueryParamStyle, 'deepObject' | 'json'>, string> = { form: ',', spaceDelimited: ' ', pipeDelimited: '|' };
 
 /**
  * Appends a query parameter in its OpenAPI style. Null and undefined values and items are left out, and so are empty
@@ -9,10 +10,14 @@ const DELIMITERS: Record<Exclude<QueryParamStyle, 'deepObject'>, string> = { for
  * one key per property; without explode, either goes out as one value joined by the style's delimiter. deepObject
  * sends name[key] keys whatever explode says. A nested object under form with explode gets dotted keys, which is how
  * Spring binds it, since OpenAPI defines no format for it. An object inside an array and a deepObject array have no
- * format either, and throw.
+ * format either, and throw. A parameter declared with JSON content goes out as JSON.
  */
 export function appendQueryParam(target: URLSearchParams, name: string, value: unknown, style: QueryParamStyle = 'form', explode = true): void {
-    if (style === 'deepObject') {
+    if (style === 'json') {
+        if (isPresent(value)) {
+            target.append(name, JSON.stringify(value));
+        }
+    } else if (style === 'deepObject') {
         if (isCollection(value)) {
             throw new Error(`OpenAPI defines no deepObject format for the array in ${name}`);
         }

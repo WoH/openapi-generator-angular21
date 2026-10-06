@@ -159,12 +159,16 @@ final class TypeScriptSnippets {
 
     /**
      * Returns the arguments that pass a query parameter's style and explode to {@code appendQueryParam}, e.g.
-     * {@code , 'deepObject', true}, or nothing for the default, form with explode.
+     * {@code , 'deepObject', true}, {@code , 'json'} for a parameter declared with JSON content, or nothing for the
+     * default, form with explode.
      *
      * @param param the query parameter
      * @return the arguments to append to the call
      */
     static String queryStyleArguments(CodegenParameter param) {
+        if (param.queryIsJsonMimeType) {
+            return ", 'json'";
+        }
         String style = param.style != null ? param.style : "form";
         return "form".equals(style) && param.isExplode ? "" : ", " + stringLiteral(style) + ", " + param.isExplode;
     }
