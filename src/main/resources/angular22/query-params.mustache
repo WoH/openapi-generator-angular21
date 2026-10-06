@@ -1,60 +1,79 @@
 {{>licenseInfo}}
 export type QueryParamStyle = 'form' | 'spaceDelimited' | 'pipeDelimited' | 'deepObject';
 
-const DELIMITERS: Record<QueryParamStyle, string> = { form: ',', spaceDelimited: ' ', pipeDelimited: '|', deepObject: ',' };
+const DELIMITERS: Record<Exclude<QueryParamStyle, 'deepObject'>, string> = { form: ',', spaceDelimited: ' ', pipeDelimited: '|' };
 
 /**
- * Appends a query parameter in its OpenAPI style: nothing for null or undefined, dates as ISO 8601, an array or set
- * as repeated keys with explode or as one value joined by the style's delimiter without it, and an object as one key
- * per property (form with explode), as name[key] keys (deepObject), or as one value of keys and values joined by the
- * style's delimiter (without explode). A nested object under form with explode gets dotted keys, which is how Spring binds it;
- * OpenAPI defines no format for that, nor for an object inside an array, which throws.
+ * Appends a query parameter in its OpenAPI style. Null and undefined values and items are left out, and so are empty
+ * arrays, sets and objects; dates go out as ISO 8601. With explode, an array or set repeats its key and an object sends
+ * one key per property; without explode, either goes out as one value joined by the style's delimiter. deepObject
+ * sends name[key] keys whatever explode says. A nested object under form with explode gets dotted keys, which is how
+ * Spring binds it, since OpenAPI defines no format for it. An object inside an array and a deepObject array have no
+ * format either, and throw.
  */
 export function appendQueryParam(target: URLSearchParams, name: string, value: unknown, style: QueryParamStyle = 'form', explode = true): void {
-    if (value === undefined || value === null) {
-        return;
-    }
-    if (Array.isArray(value) || value instanceof Set) {
-        const items = Array.from(value, (item) => format(item, name));
-        if (explode) {
-            items.forEach((item) => target.append(name, item));
-        } else {
-            target.append(name, items.join(DELIMITERS[style]));
+    if (style === 'deepObject') {
+        if (isCollection(value)) {
+            throw new Error(`OpenAPI defines no deepObject format for the array in ${name}`);
         }
-    } else if (isObject(value)) {
-        if (style === 'deepObject') {
-            appendProperties(target, value, name, (outer, key) => `${outer}[${key}]`);
-        } else if (explode) {
-            appendProperties(target, value, '', (outer, key) => (outer ? `${outer}.${key}` : key));
-        } else {
-            const entries = Object.entries(value).filter(([, entry]) => entry !== undefined && entry !== null);
-            target.append(name, entries.flatMap(([key, entry]) => [key, format(entry, name)]).join(DELIMITERS[style]));
+        appendExploded(target, name, value, (outer, key) => `${outer}[${key}]`);
+    } else if (!explode) {
+        appendJoined(target, name, value, DELIMITERS[style]);
+    } else if (isObject(value) && !isCollection(value)) {
+        for (const [key, entry] of Object.entries(value)) {
+            appendExploded(target, key, entry, dotted);
         }
     } else {
+        appendExploded(target, name, value, dotted);
+    }
+}
+
+function appendExploded(target: URLSearchParams, name: string, value: unknown, child: (outer: string, key: string) => string): void {
+    if (isCollection(value)) {
+        for (const item of value) {
+            if (isPresent(item)) {
+                target.append(name, format(item, name));
+            }
+        }
+    } else if (isObject(value)) {
+        for (const [key, entry] of Object.entries(value)) {
+            appendExploded(target, child(name, key), entry, child);
+        }
+    } else if (isPresent(value)) {
         target.append(name, format(value, name));
     }
 }
 
-function appendProperties(target: URLSearchParams, object: object, outer: string, child: (outer: string, key: string) => string): void {
-    for (const [key, entry] of Object.entries(object)) {
-        const name = child(outer, key);
-        if (entry === undefined || entry === null) {
-            continue;
-        }
-        if (Array.isArray(entry) || entry instanceof Set) {
-            for (const item of entry) {
-                target.append(name, format(item, name));
-            }
-        } else if (isObject(entry)) {
-            appendProperties(target, entry, name, child);
-        } else {
-            target.append(name, format(entry, name));
-        }
+function appendJoined(target: URLSearchParams, name: string, value: unknown, delimiter: string): void {
+    let parts: string[];
+    if (isCollection(value)) {
+        parts = Array.from(value).filter(isPresent).map((item) => format(item, name));
+    } else if (isObject(value)) {
+        parts = Object.entries(value)
+            .filter(([, entry]) => isPresent(entry))
+            .flatMap(([key, entry]) => [key, format(entry, `${name}.${key}`)]);
+    } else {
+        parts = isPresent(value) ? [format(value, name)] : [];
     }
+    if (parts.length > 0) {
+        target.append(name, parts.join(delimiter));
+    }
+}
+
+function dotted(outer: string, key: string): string {
+    return `${outer}.${key}`;
+}
+
+function isCollection(value: unknown): value is Iterable<unknown> {
+    return Array.isArray(value) || value instanceof Set;
 }
 
 function isObject(value: unknown): value is object {
     return typeof value === 'object' && value !== null && !(value instanceof Date);
+}
+
+function isPresent(value: unknown): boolean {
+    return value !== undefined && value !== null;
 }
 
 function format(value: unknown, name: string): string {
