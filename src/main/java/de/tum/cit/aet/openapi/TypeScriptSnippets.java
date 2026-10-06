@@ -10,6 +10,7 @@ import org.openapitools.codegen.CodegenParameter;
 import org.openapitools.codegen.CodegenProperty;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -169,7 +170,7 @@ final class TypeScriptSnippets {
      */
     static String queryStyleArguments(CodegenOperation op, CodegenParameter param) {
         if (param.contentType != null) {
-            return isJsonMediaType(param.contentType) ? ", 'json'" : "";
+            return jsonMediaType(param.contentType) != null ? ", 'json'" : "";
         }
         String style = param.style != null ? param.style : "form";
         if (!QUERY_STYLES.contains(style)) {
@@ -330,7 +331,7 @@ final class TypeScriptSnippets {
         for (CodegenParameter param : op.formParams) {
             String name = param.paramName;
             String key = stringLiteral(param.baseName);
-            String jsonType = isJsonMediaType(param.contentType) ? param.contentType : null;
+            String jsonType = jsonMediaType(param.contentType);
             String statement;
             if (param.isArray) {
                 CodegenProperty items = param.items;
@@ -380,13 +381,18 @@ final class TypeScriptSnippets {
     }
 
     /**
-     * Whether a media type is {@code application/json} or a {@code +json} type such as {@code application/vnd.api+json}.
+     * Returns the first JSON media type of a declared content type, which OpenAPI lets list several types separated
+     * by commas; {@code application/json} and {@code +json} types such as {@code application/vnd.api+json} count.
      *
-     * @param mediaType the media type, or null
-     * @return whether it names JSON
+     * @param contentType the declared content type, or null
+     * @return the JSON media type to send, or null when none is declared
      */
-    static boolean isJsonMediaType(String mediaType) {
-        return mediaType != null && JSON_MEDIA_TYPE.matcher(mediaType).matches();
+    private static String jsonMediaType(String contentType) {
+        if (contentType == null) {
+            return null;
+        }
+        return Arrays.stream(contentType.split(",")).map(String::strip).filter(type -> JSON_MEDIA_TYPE.matcher(type).matches())
+                .findFirst().orElse(null);
     }
 
     private static boolean isBinaryType(String dataType) {
