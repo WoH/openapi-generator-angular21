@@ -1,6 +1,8 @@
 package de.tum.cit.aet.openapi;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
@@ -320,6 +322,16 @@ class Angular22GeneratorTest {
                 """;
         assertContains(Files.readString(tempDir.resolve("api/score-api.ts")), styled.formatted("queryParams", "").indent(8));
         assertContains(Files.readString(tempDir.resolve("api/score-resources.ts")), styled.formatted("searchParams", "queryParams.").indent(8));
+    }
+
+    @Test
+    void rejectsAQueryStyleThatOpenApiDoesNotAllow() {
+        RuntimeException error = assertThrows(RuntimeException.class, () -> generateFixture("invalid/query-simple-style-openapi.yaml", Map.of()));
+        Throwable cause = error;
+        while (cause.getCause() != null) {
+            cause = cause.getCause();
+        }
+        assertEquals("Query parameter ids of operation listItems has style simple, which OpenAPI does not allow in a query", cause.getMessage());
     }
 
     @Test
