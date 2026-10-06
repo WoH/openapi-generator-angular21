@@ -5,12 +5,13 @@ export type QueryParamStyle = 'form' | 'spaceDelimited' | 'pipeDelimited' | 'dee
 const DELIMITERS: Record<Exclude<QueryParamStyle, 'deepObject' | 'json'>, string> = { form: ',', spaceDelimited: ' ', pipeDelimited: '|' };
 
 /**
- * Appends a query parameter in its OpenAPI style. Null and undefined values and items are left out, and so are empty
- * arrays, sets and objects; dates go out as ISO 8601. With explode, an array or set repeats its key and an object sends
- * one key per property; without explode, either goes out as one value joined by the style's delimiter. deepObject
- * sends name[key] keys whatever explode says. A nested object under form with explode gets dotted keys, which is how
- * Spring binds it, since OpenAPI defines no format for it. An object inside an array and a deepObject array have no
- * format either, and throw. A parameter declared with JSON content goes out as JSON.
+ * Appends a query parameter in its OpenAPI style. A parameter declared with JSON content goes out as JSON unless it
+ * is null or undefined. In every other style, null and undefined values and items are left out, and so are empty
+ * arrays, sets and objects; dates go out as ISO 8601. With explode, an array or set repeats its key and an object
+ * sends one key per property; without explode, either goes out as one value joined by the style's delimiter.
+ * deepObject sends name[key] keys whatever explode says. Under the other styles with explode, a nested object gets
+ * dotted keys, which is how Spring binds it, since OpenAPI defines no format for it. An array or object inside an
+ * array or inside a joined object, and a deepObject array, have no format either, and throw.
  */
 export function appendQueryParam(target: URLSearchParams, name: string, value: unknown, style: QueryParamStyle = 'form', explode = true): void {
     if (style === 'json') {
@@ -55,7 +56,7 @@ function appendJoined(target: URLSearchParams, name: string, value: unknown, del
         parts = Array.from(value).filter(isPresent).map((item) => format(item, name));
     } else if (isObject(value)) {
         parts = Object.entries(value)
-            .filter(([, entry]) => isPresent(entry))
+            .filter(([, entry]) => hasContent(entry))
             .flatMap(([key, entry]) => [key, format(entry, `${name}.${key}`)]);
     } else {
         parts = isPresent(value) ? [format(value, name)] : [];
@@ -81,12 +82,19 @@ function isPresent(value: unknown): boolean {
     return value !== undefined && value !== null;
 }
 
+function hasContent(value: unknown): boolean {
+    if (isCollection(value)) {
+        return Array.from(value).some(isPresent);
+    }
+    return isObject(value) ? Object.values(value).some(isPresent) : isPresent(value);
+}
+
 function format(value: unknown, name: string): string {
     if (value instanceof Date) {
         return value.toISOString();
     }
     if (typeof value === 'object' && value !== null) {
-        throw new Error(`OpenAPI defines no query format for the object in ${name}`);
+        throw new Error(`OpenAPI defines no query format for the ${isCollection(value) ? 'array' : 'object'} in ${name}`);
     }
     return String(value);
 }

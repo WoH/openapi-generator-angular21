@@ -160,7 +160,7 @@ final class TypeScriptSnippets {
     /**
      * Returns the arguments that pass a query parameter's style and explode to {@code appendQueryParam}, e.g.
      * {@code , 'deepObject', true}, {@code , 'json'} for a parameter declared with JSON content, or nothing for the
-     * default, form with explode.
+     * default, form with explode, and for content of another media type.
      *
      * @param op    the operation that declares the parameter
      * @param param the query parameter
@@ -168,8 +168,8 @@ final class TypeScriptSnippets {
      * @throws IllegalArgumentException if the style is not one OpenAPI allows in a query
      */
     static String queryStyleArguments(CodegenOperation op, CodegenParameter param) {
-        if (param.queryIsJsonMimeType) {
-            return ", 'json'";
+        if (param.contentType != null) {
+            return isJsonMediaType(param.contentType) ? ", 'json'" : "";
         }
         String style = param.style != null ? param.style : "form";
         if (!QUERY_STYLES.contains(style)) {
