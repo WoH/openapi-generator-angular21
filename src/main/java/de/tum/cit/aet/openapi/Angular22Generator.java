@@ -464,7 +464,7 @@ public class Angular22Generator extends TypeScriptAngularClientCodegen {
             String key = identifier.startsWith("_") && isReservedWord(identifier.substring(1)) ? identifier.substring(1) : identifier;
             param.vendorExtensions.put("x-query-key", TypeScriptSnippets.allocate(keys, key));
             param.vendorExtensions.put("x-wire-name-literal", TypeScriptSnippets.stringLiteral(param.baseName));
-            param.vendorExtensions.put("x-query-style-args", TypeScriptSnippets.queryStyleArguments(param));
+            param.vendorExtensions.put("x-query-style-args", TypeScriptSnippets.queryStyleArguments(op, param));
         }
     }
 

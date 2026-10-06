@@ -28,6 +28,7 @@ final class TypeScriptSnippets {
 
     /** TypeScript types that {@code String()} turns into a form field value without losing information. */
     private static final Set<String> TS_SCALAR_TYPES = Set.of("string", "number", "boolean");
+    private static final Set<String> QUERY_STYLES = Set.of("form", "spaceDelimited", "pipeDelimited", "deepObject");
     /** {@code application/json} or a {@code +json} media type such as {@code application/vnd.api+json}. */
     private static final Pattern JSON_MEDIA_TYPE = Pattern.compile("(?i)application/([^;]+\\+)?json(\\s*;.*)?");
     /** An ASCII identifier, which TypeScript accepts as a property name without quotes. */
@@ -162,14 +163,20 @@ final class TypeScriptSnippets {
      * {@code , 'deepObject', true}, {@code , 'json'} for a parameter declared with JSON content, or nothing for the
      * default, form with explode.
      *
+     * @param op    the operation that declares the parameter
      * @param param the query parameter
      * @return the arguments to append to the call
+     * @throws IllegalArgumentException if the style is not one OpenAPI allows in a query
      */
-    static String queryStyleArguments(CodegenParameter param) {
+    static String queryStyleArguments(CodegenOperation op, CodegenParameter param) {
         if (param.queryIsJsonMimeType) {
             return ", 'json'";
         }
         String style = param.style != null ? param.style : "form";
+        if (!QUERY_STYLES.contains(style)) {
+            throw new IllegalArgumentException("Query parameter " + param.baseName + " of operation " + op.operationId + " has style "
+                    + style + ", which OpenAPI does not allow in a query");
+        }
         return "form".equals(style) && param.isExplode ? "" : ", " + stringLiteral(style) + ", " + param.isExplode;
     }
 
