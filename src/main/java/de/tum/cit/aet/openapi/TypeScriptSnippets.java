@@ -7,6 +7,8 @@ package de.tum.cit.aet.openapi;
 import com.fasterxml.jackson.core.io.JsonStringEncoder;
 import org.openapitools.codegen.CodegenOperation;
 import org.openapitools.codegen.CodegenParameter;
+import org.openapitools.codegen.CodegenProperty;
+import org.openapitools.codegen.DefaultCodegen;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -292,9 +294,11 @@ final class TypeScriptSnippets {
      * {@code x-form-append} vendor extension.
      *
      * <p>{@code FormData} only accepts strings and Blobs. The collection shape decides first: an array or set of
-     * binaries goes out as one part per item, and any other array or set as one {@code application/json} array part.
-     * Of the other fields, a binary is appended as it is, a scalar or enum is converted with {@code String()}, and
-     * everything else (objects, maps) goes out as one {@code application/json} part, which is what Spring's
+     * binaries goes out as one part per item. Any other array or set goes out as repeated fields, OpenAPI's default
+     * encoding for primitive items, unless its items are objects or arrays or its {@code encoding} names a JSON
+     * content type; then it goes out as one {@code application/json} array part. Of the other fields, a binary is
+     * appended as it is, a scalar or enum is converted with {@code String()}, and everything else (objects, maps, or a
+     * field whose encoding names JSON) goes out as one {@code application/json} part, which is what Spring's
      * {@code @RequestPart} expects for a DTO.</p>
      *
      * @param op the operation whose form parameters should be processed
@@ -303,14 +307,19 @@ final class TypeScriptSnippets {
         for (CodegenParameter param : op.formParams) {
             String name = param.paramName;
             String key = stringLiteral(param.baseName);
+            boolean jsonEncoding = param.contentType != null && DefaultCodegen.isJsonMimeType(param.contentType);
             String statement;
             if (param.isArray) {
-                statement = isBinaryType(param.items != null ? param.items.dataType : null)
-                        ? name + ".forEach(item => formData.append(" + key + ", item));"
-                        : appendJsonPart(key, "Array.from(" + name + ")");
+                if (isBinaryType(param.items != null ? param.items.dataType : null)) {
+                    statement = name + ".forEach(item => formData.append(" + key + ", item));";
+                } else if (jsonEncoding || isStructured(param.items)) {
+                    statement = appendJsonPart(key, "Array.from(" + name + ")");
+                } else {
+                    statement = name + ".forEach(item => formData.append(" + key + ", String(item)));";
+                }
             } else if (isBinaryType(param.dataType)) {
                 statement = "formData.append(" + key + ", " + name + ");";
-            } else if (param.isEnum || param.isEnumRef || TS_SCALAR_TYPES.contains(param.dataType)) {
+            } else if (!jsonEncoding && (param.isEnum || param.isEnumRef || TS_SCALAR_TYPES.contains(param.dataType))) {
                 statement = "formData.append(" + key + ", String(" + name + "));";
             } else {
                 statement = appendJsonPart(key, name);
@@ -321,6 +330,10 @@ final class TypeScriptSnippets {
 
     private static String appendJsonPart(String key, String value) {
         return "formData.append(" + key + ", new Blob([JSON.stringify(" + value + ")], { type: 'application/json' }));";
+    }
+
+    private static boolean isStructured(CodegenProperty items) {
+        return items != null && (items.isModel || items.isMap || items.isFreeFormObject || items.isArray);
     }
 
     private static boolean isBinaryType(String dataType) {
