@@ -2,7 +2,7 @@
 /**
  * Appends a query parameter as OpenAPI form/explode and Spring's data binding expect it: nothing for null or
  * undefined, arrays and sets as repeated keys, dates as ISO 8601, an object as one key per property and nested
- * objects as dotted keys.
+ * objects as dotted keys. OpenAPI defines no format for an object inside an array, so such a value throws.
  */
 export function appendQueryParam(target: URLSearchParams, name: string, value: unknown): void {
     append(target, name, value, false);
@@ -14,17 +14,23 @@ function append(target: URLSearchParams, name: string, value: unknown, nested: b
     }
     if (Array.isArray(value) || value instanceof Set) {
         for (const item of value) {
-            target.append(name, format(item));
+            target.append(name, format(item, name));
         }
     } else if (typeof value === 'object' && !(value instanceof Date)) {
         for (const [key, entry] of Object.entries(value)) {
             append(target, nested ? `${name}.${key}` : key, entry, true);
         }
     } else {
-        target.append(name, format(value));
+        target.append(name, format(value, name));
     }
 }
 
-function format(value: unknown): string {
-    return value instanceof Date ? value.toISOString() : String(value);
+function format(value: unknown, name: string): string {
+    if (value instanceof Date) {
+        return value.toISOString();
+    }
+    if (typeof value === 'object' && value !== null) {
+        throw new Error(`OpenAPI defines no query format for the object in ${name}`);
+    }
+    return String(value);
 }
